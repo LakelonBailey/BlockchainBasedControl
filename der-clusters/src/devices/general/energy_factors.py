@@ -4,7 +4,7 @@ import pytz
 from datetime import datetime
 from abc import ABC, abstractmethod
 from src.devices.constants.datetime import DEFAULT_TIMEZONE
-from src.devices.lib.general.base import EnergyFactor
+from src.devices.general.base import EnergyFactor
 
 
 class TimeBasedEnergyFactor(EnergyFactor, ABC):

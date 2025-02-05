@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from src.devices.lib.general.energy_factors import EnergyFactor
-from src.devices.lib.general.base import Tier, Device
+from src.devices.general.energy_factors import EnergyFactor
+from src.devices.general.base import Tier, Device
 from src.devices.constants import device_types
 
 

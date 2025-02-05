@@ -1,4 +1,3 @@
-import argparse
 from abc import ABC
 
 class DERClusterSimulation(ABC):
