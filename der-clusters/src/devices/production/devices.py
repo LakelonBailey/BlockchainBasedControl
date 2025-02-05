@@ -1,12 +1,12 @@
-from src.lib.production.base import ProductionDevice
-from src.lib.general.energy_factors import (
+from src.devices.production.base import ProductionDevice
+from src.devices.general.energy_factors import (
     PeakHoursFactor,
     SolarFactor,
     SeasonalFactor,
     RandomUsageFactor,
     WindFactor,
 )
-from src.lib.production.tiers import (
+from src.devices.production.tiers import (
     LowProductionTier,
     ModerateProductionTier,
     HighProductionTier,

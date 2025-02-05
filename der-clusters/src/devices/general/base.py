@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Literal
 from datetime import datetime
-from src.constants import device_types
+from src.devices.constants import device_types
+import uuid
 
 
 class EnergyFactor(ABC):
@@ -39,6 +40,7 @@ class Device(ABC):
         if device_type not in device_types.DEVICE_TYPES:
             raise ValueError(f"Invalid device_type: {device_type}")
 
+        self.id = uuid.uuid4()
         self.name = device_name
         self.device_type = device_type
         self.tier = tier

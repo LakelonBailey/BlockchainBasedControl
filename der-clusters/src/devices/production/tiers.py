@@ -1,4 +1,4 @@
-from src.lib.production.base import ProductionTier
+from src.devices.production.base import ProductionTier
 
 
 class LowProductionTier(ProductionTier):
