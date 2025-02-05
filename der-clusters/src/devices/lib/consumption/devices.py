@@ -1,12 +1,12 @@
-from src.lib.consumption.base import ConsumptionDevice
-from src.lib.general.energy_factors import (
+from src.devices.lib.consumption.base import ConsumptionDevice
+from src.devices.lib.general.energy_factors import (
     PeakHoursFactor,
     WeekendFactor,
     SolarFactor,
     SeasonalFactor,
     RandomUsageFactor,
 )
-from src.lib.consumption.tiers import (
+from src.devices.lib.consumption.tiers import (
     LowerPowerTier,
     LowPowerTier,
     MediumPowerTier,

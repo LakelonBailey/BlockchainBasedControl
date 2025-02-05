@@ -1,4 +1,4 @@
-from src.lib.consumption.base import ConsumptionTier
+from src.devices.lib.consumption.base import ConsumptionTier
 
 
 class LowerPowerTier(ConsumptionTier):

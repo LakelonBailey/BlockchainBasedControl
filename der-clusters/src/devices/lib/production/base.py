@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from src.lib.general.energy_factors import EnergyFactor
-from src.lib.general.base import Tier, Device
-from src.constants import device_types
+from src.devices.lib.general.energy_factors import EnergyFactor
+from src.devices.lib.general.base import Tier, Device
+from src.devices.constants import device_types
 
 
 class ProductionTier(Tier, ABC):
