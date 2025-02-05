@@ -1,0 +1,85 @@
+from abc import ABC, abstractmethod
+from typing import Literal
+from datetime import datetime
+from src.constants import device_types
+
+
+class EnergyFactor(ABC):
+    """Abstract base class for consumption energy_factors"""
+
+    @abstractmethod
+    def __init__(self, factor_name: str):
+        self.name = factor_name
+
+    @abstractmethod
+    def get_multiplier(self, context: dict) -> float:
+        """Compute multiplier based on context (e.g., time of day, temperature)."""
+        pass
+
+
+class Tier(ABC):
+
+    @abstractmethod
+    def __init__(self, default_kw: float, tier_no: int):
+        self.default_kw = default_kw
+        self.tier_no = tier_no
+
+
+class Device(ABC):
+    """Base class for consumption devices"""
+
+    @abstractmethod
+    def __init__(
+        self,
+        device_name: str,
+        device_type: Literal["production", "consumption"],
+        tier: Tier,
+        energy_factors: list[EnergyFactor],
+    ):
+        if device_type not in device_types.DEVICE_TYPES:
+            raise ValueError(f"Invalid device_type: {device_type}")
+
+        self.name = device_name
+        self.device_type = device_type
+        self.tier = tier
+        self.energy_factors = energy_factors
+
+    def calculate_kw(self, context: dict = None):
+        """
+        Calculate instantaneous kW consumption based on consumption energy_factors.
+
+        Args:
+            context (dict, optional): Environmental conditions (e.g., {"hour": 18, \
+            "temperature": 85}).
+
+        Returns:
+            float: Current kW consumption.
+        """
+        if context is None:
+            context = {}
+
+        multiplier = 1
+        for factor in self.energy_factors:
+            multiplier *= factor.get_multiplier(context)
+
+        return multiplier * self.tier.default_kw
+
+    def calculate_kwh(self, start_time: datetime, end_time: datetime) -> float:
+        """
+        Calculate device kWh for the given time range.
+
+        Args:
+            start_time (datetime): Start time of the time interval
+            end_time (datetime): End time of the time interval
+        Returns:
+            float: Consumption in kWh.
+
+        """
+        hours = (end_time - start_time).seconds / 3600
+        context = {"start_time": start_time, "end_time": end_time}
+        kwh = self.calculate_kw(context) * hours
+
+        if self.device_type == device_types.CONSUMPTION:
+            return kwh * -1
+
+        return kwh

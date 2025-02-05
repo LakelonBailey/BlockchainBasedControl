@@ -1,0 +1,4 @@
+PRODUCTION = "production"
+CONSUMPTION = "consumption"
+
+DEVICE_TYPES = [PRODUCTION, CONSUMPTION]
