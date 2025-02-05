@@ -79,7 +79,9 @@ class Device(ABC):
         context = {"start_time": start_time, "end_time": end_time}
         kwh = self.calculate_kw(context) * hours
 
-        if self.device_type == device_types.CONSUMPTION:
-            return kwh * -1
+        # NOTE: Removing this for now as it's probably better to implement
+        # this type of logic further upstream
+        # if self.device_type == device_types.CONSUMPTION:
+        #     return kwh * -1
 
         return kwh
