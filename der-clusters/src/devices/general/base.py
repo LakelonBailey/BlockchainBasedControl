@@ -5,7 +5,13 @@ from src.devices.constants import device_types
 import uuid
 
 
-class EnergyFactor(ABC):
+class SerializableClass(ABC):
+
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
+
+class EnergyFactor(SerializableClass, ABC):
     """Abstract base class for consumption energy_factors"""
 
     @abstractmethod
@@ -17,16 +23,28 @@ class EnergyFactor(ABC):
         """Compute multiplier based on context (e.g., time of day, temperature)."""
         pass
 
+    def to_dict(self):
+        return {
+            'name': self.name,
+        }
 
-class Tier(ABC):
+
+
+class Tier(SerializableClass, ABC):
 
     @abstractmethod
     def __init__(self, default_kw: float, tier_no: int):
         self.default_kw = default_kw
         self.tier_no = tier_no
 
+    def to_dict(self):
+        return {
+            'tier_no': self.tier_no,
+            'default_kw': self.default_kw
+        }
 
-class Device(ABC):
+
+class Device(SerializableClass, ABC):
     """Base class for consumption devices"""
 
     @abstractmethod
@@ -45,6 +63,17 @@ class Device(ABC):
         self.device_type = device_type
         self.tier = tier
         self.energy_factors = energy_factors
+
+    def to_dict(self):
+        return {
+            'id': str(self.id),
+            'name': self.name,
+            'type': self.device_type,
+            'tier': self.tier.to_dict(),
+            'energy_factors': [
+                factor.to_dict() for factor in self.energy_factors
+            ]
+        }
 
     def calculate_kw(self, context: dict = None):
         """

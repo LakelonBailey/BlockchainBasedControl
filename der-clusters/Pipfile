@@ -5,6 +5,9 @@ name = "pypi"
 
 [packages]
 pytz = "*"
+fastapi = "*"
+uvicorn = "*"
+websockets = "*"
 
 [dev-packages]
 ipykernel = "*"
@@ -12,4 +15,3 @@ prettytable = "*"
 
 [requires]
 python_version = "3.12"
-python_full_version = "3.12.1"

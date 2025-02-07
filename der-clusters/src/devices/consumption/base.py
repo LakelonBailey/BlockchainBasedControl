@@ -4,11 +4,11 @@ from src.devices.general.base import Tier, Device
 from src.devices.constants import device_types
 
 
-class ConsumptionTier(ABC, Tier):
+class ConsumptionTier(Tier, ABC):
     """Base class for consumption tiers"""
 
 
-class ConsumptionDevice(ABC, Device):
+class ConsumptionDevice(Device, ABC):
     """Base class for consumption devices"""
 
     @abstractmethod
