@@ -4,14 +4,20 @@ import os
 import time
 from src.utils.devices import get_device_name_map
 
+
 def start_device(device_type, meter_origin):
     """Start a device daemon process using multiprocessing instead of subprocess."""
+
     def run_device():
-        os.system(f"python -m src.simulation.device --device {device_type} --meter-origin {meter_origin}")
+        os.system(
+            f"python -m src.simulation.device --device {device_type} "
+            f"--meter-origin {meter_origin}"
+        )
 
     process = multiprocessing.Process(target=run_device)
     process.start()
     return process
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="DER Cluster Manager")
@@ -19,12 +25,13 @@ if __name__ == "__main__":
         "--devices",
         type=str,
         required=True,
-        help=f"Comma-separated list of device names. Options: {', '.join(get_device_name_map().keys())}",
+        help=f"Comma-separated list of device names. Options: \
+            {', '.join(get_device_name_map().keys())}",
     )
     parser.add_argument(
         "--meter-origin",
         type=str,
-        required=True,
+        default=os.environ.get("METER_ORIGIN", "ws://localhost:8000)"),
         help="Smart meter WebSocket URL (e.g., ws://localhost:8000)",
     )
 

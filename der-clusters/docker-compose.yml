@@ -10,6 +10,8 @@ services:
       - smart_grid
     ports:
       - "8001:8000"
+    environment:
+      - METER_ORIGIN=ws://der-cluster-1:8000
 
   der-cluster-2:
     build:
@@ -20,6 +22,8 @@ services:
       - smart_grid
     ports:
       - "8002:8000"
+    environment:
+      - METER_ORIGIN=ws://der-cluster-2:8000
 
   der-cluster-3:
     build:
@@ -30,6 +34,8 @@ services:
       - smart_grid
     ports:
       - "8003:8000"
+    environment:
+      - METER_ORIGIN=ws://der-cluster-3:8000
 
 networks:
   smart_grid:

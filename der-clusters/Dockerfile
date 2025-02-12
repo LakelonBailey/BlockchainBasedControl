@@ -17,4 +17,5 @@ COPY . /app/
 EXPOSE 8000
 
 # Run both the Smart Meter and Device Collection as modules
-CMD ["sh", "-c", "uvicorn src.simulation.smart-meter:app --host 0.0.0.0 --port 8000 & python -m src.simulation.device-collection --devices SmallSolarPanel,LEDLight,DesktopComputer --meter-origin=ws://localhost:8000 && wait"]
+CMD ["sh", "-c", "uvicorn src.simulation.smart-meter:app --host 0.0.0.0 --port 8000 & sleep 5 && python -m src.simulation.device-collection --devices SmallSolarPanel,LEDLight,DesktopComputer && wait"]
+

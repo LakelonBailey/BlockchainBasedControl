@@ -1,3 +1,4 @@
+import os
 import asyncio
 import json
 import websockets
@@ -32,7 +33,6 @@ async def send_energy_data(device_name: str, meter_origin: str):
                 start_time = current_time
 
                 await websocket.send(json.dumps(message))
-                print(f"[{device_id}] Sent: {message}")
 
                 await asyncio.sleep(random.randint(1, 10))
     except Exception as e:
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--meter-origin",
-        required=True,
+        default=os.environ.get("METER_ORIGIN", "ws://localhost:8000)"),
         help="Smart meter WebSocket URL",
     )
 
