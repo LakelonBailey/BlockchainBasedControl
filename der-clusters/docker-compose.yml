@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  der-cluster-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: der-cluster-1
+    networks:
+      - smart_grid
+    ports:
+      - "8001:8000"
+
+  der-cluster-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: der-cluster-2
+    networks:
+      - smart_grid
+    ports:
+      - "8002:8000"
+
+  der-cluster-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: der-cluster-3
+    networks:
+      - smart_grid
+    ports:
+      - "8003:8000"
+
+networks:
+  smart_grid:
+    driver: bridge

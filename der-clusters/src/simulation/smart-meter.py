@@ -22,9 +22,6 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
             print("\nMESSAGE RECEIVED:")
             pprint(message)
 
-            # Store/update energy data
-            connected_devices[device_id] = message
-
     except WebSocketDisconnect:
         print(f"[{device_id}] Disconnected.")
         del connected_devices[device_id]
