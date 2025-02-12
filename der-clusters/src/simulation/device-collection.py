@@ -1,26 +1,21 @@
 import argparse
-import subprocess
-import signal
+import multiprocessing
+import os
 import time
 from src.utils.devices import get_device_name_map
 
 
 def start_device(device_type, meter_origin):
-    """Start a device daemon process."""
-    commands = [
-        "python",
-        "-m",
-        "src.simulation.device",
-        "--device",
-        device_type,
-        "--meter-origin",
-        meter_origin,
-    ]
-    process = subprocess.Popen(
-        commands,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    """Start a device daemon process using multiprocessing instead of subprocess."""
+
+    def run_device():
+        os.system(
+            f"python -m src.simulation.device --device {device_type} "
+            f"--meter-origin {meter_origin}"
+        )
+
+    process = multiprocessing.Process(target=run_device)
+    process.start()
     return process
 
 
@@ -36,7 +31,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--meter-origin",
         type=str,
-        required=True,
+        default=os.environ.get("METER_ORIGIN", "ws://localhost:8000)"),
         help="Smart meter WebSocket URL (e.g., ws://localhost:8000)",
     )
 
@@ -59,8 +54,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nStopping all device daemons...")
         for process in processes:
-            print(f"[{device}] Terminating PID {process.pid}")
-            process.send_signal(signal.SIGTERM)  # Graceful shutdown
-            process.wait()  # Ensure process exits
+            print(f"Terminating PID {process.pid}")
+            process.terminate()
+            process.join()  # Ensure processes exit cleanly
 
         print("All devices stopped.")
