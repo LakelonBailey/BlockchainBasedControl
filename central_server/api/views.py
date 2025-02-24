@@ -1,4 +1,3 @@
-# api/views.py
 import uuid
 import secrets
 from rest_framework.views import APIView
@@ -10,8 +9,6 @@ from .serializers import (
     BatchTransactionUploadSerializer,
 )
 from .models import SmartMeter, Transaction
-
-# api/views.py
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication, TokenHasScope
 
 

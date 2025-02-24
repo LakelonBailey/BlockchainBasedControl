@@ -10,14 +10,8 @@ ENVIRONMENT_OPTIONS = ["local", "test", "prod"]
 if not ENVIRONMENT or ENVIRONMENT not in ENVIRONMENT_OPTIONS:
     raise ValueError(f"Invalid or missing 'ENVIRONMENT' value: {ENVIRONMENT}")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ["SECRET_KEY"]
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 if ENVIRONMENT == "local":
     ALLOWED_HOSTS = [
@@ -25,11 +19,11 @@ if ENVIRONMENT == "local":
         "127.0.0.1",
         "host.docker.internal",
     ]
+    DEBUG = True
 else:
     ALLOWED_HOSTS = []
+    DEBUG = False
 
-
-# Application definition
 
 INSTALLED_APPS = [
     "django.contrib.admin",
