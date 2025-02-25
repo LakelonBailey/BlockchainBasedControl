@@ -1,9 +1,15 @@
 # api/serializers.py
 from rest_framework import serializers
-from .models import ProvisioningToken
+from .models import ProvisioningToken, Transaction
 
 
-class TransactionSerializer(serializers.Serializer):
+class TransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Transaction
+        fields = "__all__"
+
+
+class TransactionUploadSerializer(serializers.Serializer):
     energy_kwh = serializers.FloatField()
     transaction_type = serializers.ChoiceField(
         choices=[("production", "Production"), ("consumption", "Consumption")]
@@ -11,7 +17,7 @@ class TransactionSerializer(serializers.Serializer):
 
 
 class BatchTransactionUploadSerializer(serializers.Serializer):
-    transactions = TransactionSerializer(many=True)
+    transactions = TransactionUploadSerializer(many=True)
 
 
 class SmartMeterRegistrationSerializer(serializers.Serializer):

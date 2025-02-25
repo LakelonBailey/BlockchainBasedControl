@@ -3,13 +3,35 @@ import secrets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework import generics, permissions
+from rest_framework.pagination import PageNumberPagination
 from oauth2_provider.models import Application
 from .serializers import (
     SmartMeterRegistrationSerializer,
     BatchTransactionUploadSerializer,
+    TransactionSerializer,
 )
 from .models import SmartMeter, Transaction
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication, TokenHasScope
+
+
+# Custom pagination class using 'page' and 'limit' query parameters
+class TransactionPagination(PageNumberPagination):
+    page_size = 10  # default items per page
+    page_query_param = "page"  # for the current page number (default)
+    page_size_query_param = "limit"  # allows client to set page size using "limit"
+    max_page_size = 100
+
+
+class TransactionListAPIView(generics.ListAPIView):
+    queryset = Transaction.objects.all().order_by("-timestamp")
+    serializer_class = TransactionSerializer
+    pagination_class = TransactionPagination
+
+    # Require OAuth2 authentication with the 'openid' scope.
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [permissions.IsAuthenticated, TokenHasScope]
+    required_scopes = ["openid"]
 
 
 class BatchTransactionUploadView(APIView):

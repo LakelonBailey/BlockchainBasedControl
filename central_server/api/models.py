@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from lib.models import BaseModel
 import secrets
 
 
@@ -7,7 +8,7 @@ def generate_provisioning_token():
     return secrets.token_urlsafe(32)
 
 
-class ProvisioningToken(models.Model):
+class ProvisioningToken(BaseModel):
     token = models.CharField(
         max_length=100, unique=True, default=generate_provisioning_token, editable=False
     )
@@ -23,7 +24,7 @@ class ProvisioningToken(models.Model):
         return self.token
 
 
-class SmartMeter(models.Model):
+class SmartMeter(BaseModel):
     device_id = models.CharField(max_length=100, unique=True)
     public_key = models.TextField()
     application = models.OneToOneField(
@@ -40,7 +41,7 @@ class SmartMeter(models.Model):
         return self.device_id
 
 
-class Transaction(models.Model):
+class Transaction(BaseModel):
     TRANSACTION_TYPES = (
         ("production", "Production"),
         ("consumption", "Consumption"),

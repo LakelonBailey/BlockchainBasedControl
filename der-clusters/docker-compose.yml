@@ -15,8 +15,8 @@ services:
       - CENTRAL_SERVER_ORIGIN=http://host.docker.internal:8080
 
       # Lake: These creds won't work for everyone. It's just what I have in my local database.
-      - CLIENT_ID=9d924af736604dd48769bfdaa94e67d6
-      - CLIENT_SECRET=dBm0--cSQWxX3HYKIxStd4HoZaiFHmUguJlIEvFjXyo
+      - CLIENT_ID=36094b298af740e7a9a67505695d3718
+      - CLIENT_SECRET=FUOA6_WA-3viPA_kw0Y4dXRIWY3uXf9Yyyv61pYH39Q
 
   # der-cluster-2:
   #   build:

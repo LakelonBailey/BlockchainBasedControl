@@ -1,6 +1,10 @@
 # api/urls.py
 from django.urls import path
-from .views import SmartMeterRegistrationView, BatchTransactionUploadView
+from .views import (
+    SmartMeterRegistrationView,
+    BatchTransactionUploadView,
+    TransactionListAPIView,
+)
 
 urlpatterns = [
     path(
@@ -13,4 +17,5 @@ urlpatterns = [
         BatchTransactionUploadView.as_view(),
         name="batch-transaction-upload",
     ),
+    path("transactions/", TransactionListAPIView.as_view(), name="transaction_list"),
 ]
