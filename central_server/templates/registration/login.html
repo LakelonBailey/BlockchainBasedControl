@@ -1,0 +1,72 @@
+{% extends "base.html" %} {% load i18n %} {% block content %}
+<form method="post" action="/login/">
+  {% csrf_token %}
+  <div class="is-flex is-justify-content-center">
+    <div style="width: 20rem">
+      <div class="is-flex is-justify-content-center" style="width: 100%">
+        <h2 class="is-size-3" style="font-weight: bold">Login</h2>
+      </div>
+      <div class="field">
+        <p class="control has-icons-left has-icons-right">
+          <input
+            class="input"
+            type="email"
+            name="email"
+            placeholder="Email"
+            required
+            {%
+            if
+            email
+            %}
+            value="{{email}}"
+            {%
+            endif
+            %}
+          />
+          <span class="icon is-small is-left">
+            <i class="fas fa-envelope"></i>
+          </span>
+        </p>
+      </div>
+      <div class="field">
+        <p class="control has-icons-left">
+          <input
+            class="input"
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+          />
+          <span class="icon is-small is-left">
+            <i class="fas fa-lock"></i>
+          </span>
+        </p>
+      </div>
+      <div class="field">
+        <p class="control">
+          <button
+            class="button is-success is-full-width"
+            type="submit"
+            style="width: 100%"
+          >
+            {% trans 'Log in' %}
+          </button>
+        </p>
+      </div>
+      {% if error %}
+      <div
+        class="notification is-danger is-flex is-align-items-center"
+        style="padding: 0.5rem"
+      >
+        <p><span style="font-weight: bold">Error:</span> {{error}}</p>
+      </div>
+      {% endif %}
+      <input type="hidden" name="next" value="{{ next }}" />
+      <p>
+        {% trans "Not member" %}?
+        <a href="{% url 'signup' %}">{% trans "Signup" %}</a>!
+      </p>
+    </div>
+  </div>
+</form>
+{% endblock %}

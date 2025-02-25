@@ -12,30 +12,35 @@ services:
       - "8001:8000"
     environment:
       - METER_ORIGIN=ws://der-cluster-1:8000
+      - CENTRAL_SERVER_ORIGIN=http://host.docker.internal:8080
 
-  der-cluster-2:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: der-cluster-2
-    networks:
-      - smart_grid
-    ports:
-      - "8002:8000"
-    environment:
-      - METER_ORIGIN=ws://der-cluster-2:8000
+      # Lake: These creds won't work for everyone. It's just what I have in my local database.
+      - CLIENT_ID=36094b298af740e7a9a67505695d3718
+      - CLIENT_SECRET=FUOA6_WA-3viPA_kw0Y4dXRIWY3uXf9Yyyv61pYH39Q
 
-  der-cluster-3:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: der-cluster-3
-    networks:
-      - smart_grid
-    ports:
-      - "8003:8000"
-    environment:
-      - METER_ORIGIN=ws://der-cluster-3:8000
+  # der-cluster-2:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: der-cluster-2
+  #   networks:
+  #     - smart_grid
+  #   ports:
+  #     - "8002:8000"
+  #   environment:
+  #     - METER_ORIGIN=ws://der-cluster-2:8000
+
+  # der-cluster-3:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: der-cluster-3
+  #   networks:
+  #     - smart_grid
+  #   ports:
+  #     - "8003:8000"
+  #   environment:
+  #     - METER_ORIGIN=ws://der-cluster-3:8000
 
 networks:
   smart_grid:
