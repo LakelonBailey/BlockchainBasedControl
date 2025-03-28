@@ -11,6 +11,7 @@ class SerializableClass(ABC):
     def to_dict(self) -> dict:
         pass
 
+
 class EnergyFactor(SerializableClass, ABC):
     """Abstract base class for consumption energy_factors"""
 
@@ -25,9 +26,8 @@ class EnergyFactor(SerializableClass, ABC):
 
     def to_dict(self):
         return {
-            'name': self.name,
+            "name": self.name,
         }
-
 
 
 class Tier(SerializableClass, ABC):
@@ -38,10 +38,7 @@ class Tier(SerializableClass, ABC):
         self.tier_no = tier_no
 
     def to_dict(self):
-        return {
-            'tier_no': self.tier_no,
-            'default_kw': self.default_kw
-        }
+        return {"tier_no": self.tier_no, "default_kw": self.default_kw}
 
 
 class Device(SerializableClass, ABC):
@@ -66,13 +63,11 @@ class Device(SerializableClass, ABC):
 
     def to_dict(self):
         return {
-            'id': str(self.id),
-            'name': self.name,
-            'type': self.device_type,
-            'tier': self.tier.to_dict(),
-            'energy_factors': [
-                factor.to_dict() for factor in self.energy_factors
-            ]
+            "id": str(self.id),
+            "name": self.name,
+            "type": self.device_type,
+            "tier": self.tier.to_dict(),
+            "energy_factors": [factor.to_dict() for factor in self.energy_factors],
         }
 
     def calculate_kw(self, context: dict = None):

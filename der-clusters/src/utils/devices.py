@@ -2,6 +2,8 @@ import importlib
 import inspect
 from typing import Literal
 from src.devices.general.base import Device
+from src.devices.consumption.base import ConsumptionDevice
+from src.devices.production.base import ProductionDevice
 
 
 def get_device_name_map(device_type: Literal["production", "consumption"] = None):
@@ -33,5 +35,8 @@ def get_device_name_map(device_type: Literal["production", "consumption"] = None
     return {
         name: cls
         for name, cls in all_classes
-        if issubclass(cls, Device) and cls is not Device
+        if issubclass(cls, Device)
+        and cls is not Device
+        and cls is not ConsumptionDevice
+        and cls is not ProductionDevice
     }
