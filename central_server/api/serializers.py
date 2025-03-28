@@ -1,6 +1,16 @@
 # api/serializers.py
 from rest_framework import serializers
-from .models import ProvisioningToken, Transaction
+from .models import Transaction
+from .models import SmartMeter
+
+
+class SmartMeterCredentialSerializer(serializers.ModelSerializer):
+    client_id = serializers.CharField(source="application.client_id")
+    client_secret = serializers.CharField(source="raw_client_secret")
+
+    class Meta:
+        model = SmartMeter
+        fields = ["client_id", "client_secret"]
 
 
 class TransactionSerializer(serializers.ModelSerializer):
@@ -14,28 +24,8 @@ class TransactionUploadSerializer(serializers.Serializer):
     transaction_type = serializers.ChoiceField(
         choices=[("production", "Production"), ("consumption", "Consumption")]
     )
+    timestamp = serializers.DateTimeField()
 
 
 class BatchTransactionUploadSerializer(serializers.Serializer):
     transactions = TransactionUploadSerializer(many=True)
-
-
-class SmartMeterRegistrationSerializer(serializers.Serializer):
-    device_id = serializers.CharField(max_length=100)
-    provisioning_token = serializers.CharField(max_length=100)
-    public_key = serializers.CharField()
-
-    def validate_provisioning_token(self, value):
-        try:
-            token_obj = ProvisioningToken.objects.get(token=value)
-        except ProvisioningToken.DoesNotExist:
-            raise serializers.ValidationError("Invalid provisioning token")
-
-        # if token_obj.is_used:
-        #     raise serializers.ValidationError("Provisioning token already used")
-
-        # if token_obj.is_expired():
-        #     raise serializers.ValidationError("Provisioning token expired")
-
-        self.context["token_obj"] = token_obj
-        return value

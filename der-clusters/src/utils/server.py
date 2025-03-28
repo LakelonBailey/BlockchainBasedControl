@@ -39,20 +39,36 @@ class CentralServerAPI:
         else:
             raise Exception("Failed to obtain access token: " + response.text)
 
+    async def post(self, url: str, payload: dict = None, headers: dict = None):
+        if headers is None:
+            headers = {}
+        headers.update({"Authorization": f"Bearer {await self.get_access_token()}"})
+
+        return await self.client.post(url, json=payload, headers=headers)
+
+    async def ping(self):
+        """
+        Ping the server to communicate uptime.
+        """
+        response = await self.post("/api/ping/")
+        if response.status_code in (200, 201):
+            return
+        else:
+            raise Exception("Failed to ping central server: " + response.text)
+
     async def post_transactions(self, transactions: list[dict]):
         """
         Posts a batch of transactions to the central server asynchronously.
         Each transaction should be a dictionary with 'transaction_type' and
         'energy_kwh'.
         """
-        token = await self.get_access_token()
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }
         payload = {"transactions": transactions}
-        response = await self.client.post(
-            "/api/transactions/batch_upload/", json=payload, headers=headers
+        response = await self.post(
+            "/api/transactions/batch_upload/",
+            payload=payload,
+            headers={
+                "Content-Type": "application/json",
+            },
         )
         if response.status_code in (200, 201):
             return response.json()

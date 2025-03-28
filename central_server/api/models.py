@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils import timezone
 from lib.models import BaseModel
 import secrets
 
@@ -8,37 +7,37 @@ def generate_provisioning_token():
     return secrets.token_urlsafe(32)
 
 
-class ProvisioningToken(BaseModel):
+class ClusterRegistration(BaseModel):
     token = models.CharField(
-        max_length=100, unique=True, default=generate_provisioning_token, editable=False
+        default=generate_provisioning_token, unique=True, editable=False, max_length=50
     )
-    is_used = models.BooleanField(default=False)
-    device_id = models.CharField(max_length=100, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField(blank=True, null=True)
-
-    def is_expired(self):
-        return self.expires_at and timezone.now() > self.expires_at
+    quantity = models.PositiveIntegerField()
+    used_count = models.PositiveIntegerField(default=0)
+    last_used = models.DateTimeField(null=True, blank=True)
+    is_locked = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.token
+        return f"Registration {self.token} ({self.quantity})"
 
 
 class SmartMeter(BaseModel):
-    device_id = models.CharField(max_length=100, unique=True)
-    public_key = models.TextField()
+    registration = models.ForeignKey(
+        ClusterRegistration,
+        on_delete=models.CASCADE,
+        related_name="smart_meters",
+        null=True,
+    )
     application = models.OneToOneField(
         "oauth2_provider.Application",
         on_delete=models.CASCADE,
         related_name="smart_meter",
     )
-    plain_client_secret = models.CharField(
-        max_length=256, blank=True, null=True
-    )  # Store plain secret for re-registration
     registered_at = models.DateTimeField(auto_now_add=True)
+    raw_client_secret = models.CharField(max_length=100, null=True)
+    last_ping_ts = models.DateTimeField(null=True)
 
     def __str__(self):
-        return self.device_id
+        return str(self.application.client_id)
 
 
 class Transaction(BaseModel):
@@ -52,8 +51,8 @@ class Transaction(BaseModel):
     )
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
     energy_kwh = models.DecimalField(max_digits=10, decimal_places=8)
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(null=True)
 
     def __str__(self):
-        return f"{self.smart_meter.device_id} - {self.transaction_type} - \
+        return f"{self.smart_meter.uuid} - {self.transaction_type} - \
 {self.energy_kwh} kWh"
