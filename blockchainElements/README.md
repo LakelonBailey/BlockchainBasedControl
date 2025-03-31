@@ -60,3 +60,15 @@ geth attach geth.ipc
 you can run commands like "eth.blockNumber" or "admin.peers" to make sure your nodes are visible to one another. 
 
 
+
+## Deploying Smart Contracts 
+
+### Compile Contracts with Remix
+Use remix to compile the contracts. In remix you will see where you can copy the byte code and ABI for the smart contract. 
+
+### JS Deployment scripts
+The ABI and byte code is added to a JS script where that script can then be executed on the GETH command line and deployed. Add the script into your node's data directory and run:
+```
+loadScript('scriptName.js') 
+```
+In the Geth console 
