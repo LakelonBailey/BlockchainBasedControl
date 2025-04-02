@@ -1,47 +1,14 @@
 # Requirements
 * Python 3
 * Geth bootnode (instructions below)
-* Go-lang (instructions below)
 * Geth 1.13.14 (instructions below)
 
-## Go-Lang install
 
-1. Remove any previous Go installation by deleting the /usr/local/go folder (if it exists), then extract the archive you just downloaded into /usr/local, creating a fresh Go tree in /usr/local/go (You may need to run the command as root or through sudo) :
 
-    `$ rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.2.linux-amd64.tar.gz`      
-
-2. Add /usr/local/go/bin to the PATH environment variable. You can do this by adding the following line to your $HOME/.profile or /etc/profile (for a system-wide installation): 
-
-    `export PATH=$PATH:/usr/local/go/bin`
-3. Verify that you've installed Go by opening a command prompt and typing the following command: 
-    
-    `go version`
-
-## Bootnode install
-1. To get the bootnode module we need to first get an earlier version of geth using: 
-```
-sudo apt update && sudo apt install -y build-essential golang
-tar -xvf go-ethereum-1.10.26.tar.gz
-cd go-ethereum
-```
-2. then build the bootnode with
-
-* `go build -o build/bin/bootnode ./cmd/bootnode`
-
-   or if that doesnt work
-
-* `go run build/ci.go install ./cmd/bootnode`
-3. move build to system path
-```
-sudo mv build/bin/bootnode /usr/local/bin/
-sudo chmod +x /usr/local/bin/bootnode
-```
-4. Verify install `bootnode --help`
-
-## Geth install
+## Geth and Bootnode install
 1. Get the geth tar:
 
-     `wget https://gethstore.blob.core.windows.net/builds/geth-linux-arm64-1.13.14-2bd6bd01.tar.gz`
+     `wget https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.13.14-2bd6bd01.tar.gz`
 2. Extract the tar file 
 
     `tar -xvf geth-linux-amd64-1.13.14-2bd6bd01.tar.gz`
@@ -49,6 +16,8 @@ sudo chmod +x /usr/local/bin/bootnode
     
     `sudo mv geth-linux-arm64-1.13.14-2bd6bd01/geth /usr/local/bin/geth`
 4. Verify install `Geth --version` or `Geth version`
+5. Install bootnode `apt install bootnode`
+6. Verify Bootnode install `bootnode --help`
 ### make sure you are in the geth-auto-setup directory
 `cd geth-auto-setup`
 
