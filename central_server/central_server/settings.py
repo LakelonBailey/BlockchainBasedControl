@@ -20,11 +20,11 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 
 if ENVIRONMENT == "local":
     ALLOWED_HOSTS = ["*"]
-    ALLOWED_ORIGINS = ["http://localhost:5173", "http://localhost:8080"]
+    ALLOWED_ORIGINS = ["http://localhost:5173", "http://localhost:8000"]
     CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
     DEBUG = True
     TEMPLATE_PATH = "templates/"
-    BASE_URL = "http://localhost:8080"
+    BASE_URL = "http://localhost:8000"
     CORS_ALLOW_ALL_ORIGINS = True
 else:
     ALLOWED_HOSTS = []

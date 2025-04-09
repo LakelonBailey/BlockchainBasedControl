@@ -3,19 +3,20 @@ import os
 import subprocess
 import time
 import threading
-
+abs_dir = os.path.dirname(os.path.abspath(__file__))
 def get_sub_dirs():
-  dir =  [f.path for f in os.scandir('./') if f.is_dir()]
-  for i in range(len(dir)):
-    dir[i] = dir[i][2:]
+  dir =  [f.path for f in os.scandir(f'{abs_dir}/geth_accounts/') if f.is_dir()]
+  #for i in range(len(dir)):
+    #dir[i] = dir[i][2:]
   return dir
 
 def start_boot_node_process():
   bootnode_process = subprocess.Popen(
   ['bootnode', '-nodekey','boot.key','-verbosity', '7','-addr', "127.0.0.1:30301"],
-  stdout=subprocess.PIPE,
-  stderr=subprocess.PIPE,
-  text=True
+  stdout=subprocess.DEVNULL,
+  stderr=subprocess.DEVNULL,
+  text=True,
+  start_new_session=True
 )
   return bootnode_process
 
@@ -36,9 +37,9 @@ def monitor_bootnode(process):
   print("Bootnode terminated.")
 
 def start_nodes(node: str, port1: int, port2: int, port3: int, networkid: int):
-  with open('enode.txt', 'r')as file:
+  with open(f'{abs_dir}/enode.txt', 'r')as file:
     enode = file.read()
-    
+  print('------->',node)
   with open(f'{node}/address.txt', 'r') as file:
     address = file.read()
   
@@ -65,7 +66,7 @@ def start_nodes(node: str, port1: int, port2: int, port3: int, networkid: int):
     '--http',
     '--http.corsdomain="*"',
     '--http.api',
-    'web3,eth,debug,personal,net',
+    'web3,eth,debug,personal,net,admin,clique',
     '--networkid', str(networkid),
     '--unlock', str(address),
     '--password', str(password_file),
@@ -83,13 +84,14 @@ def start_nodes(node: str, port1: int, port2: int, port3: int, networkid: int):
     '--networkid', str(networkid),
     '--unlock', str(address),
     '--password', str(password_file),
+    "--http",
     '--http.api',
-    'web3,eth,debug,personal,net',
+    'web3,eth,debug,personal,net,admin,clique',
     '--allow-insecure-unlock',
     '--http.port', str(port3),
     '--http.corsdomain="*"',
   ]
-  node_dir = os.path.join(os.getcwd(), node)
+  node_dir = os.path.join(f'{abs_dir}/geth_accounts', node)
   validator_file = os.path.join(node_dir, "validator.txt")
   with open(validator_file, "r") as file:
     is_valid = file.read()
@@ -98,7 +100,8 @@ def start_nodes(node: str, port1: int, port2: int, port3: int, networkid: int):
     else:
       command = node_start_lite
   print(f'Starting Geth node: {node}, at using ports {port1}, {port2}, {port3}')
-  process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+  subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True, start_new_session=True)
+  """
   while True:
     output = process.stdout.readline()
     if output == "" and process.poll() is not None:
@@ -107,32 +110,41 @@ def start_nodes(node: str, port1: int, port2: int, port3: int, networkid: int):
       print(f"Geth Output: {output.strip()}")
     time.sleep(.2)
   process.wait()
+  """
+def main():
+  abs_dir = os.path.dirname(os.path.abspath(__file__))
+  if len(sys.argv) != 2:
+    print('Usage: python run_nodes.py <chainid>')
+    exit()
+  nodes = get_sub_dirs()
+  print(nodes)
 
-if len(sys.argv) != 2:
-  print('Usage: python run_nodes.py <chainid>')
-  exit()
-nodes = get_sub_dirs()
-print(nodes)
-
-bootnode = start_boot_node_process()
+  bootnode = start_boot_node_process()
 
 
-monitor_bootnode_thread = threading.Thread(target=monitor_bootnode, args=(bootnode,))
-monitor_bootnode_thread.start()
-time.sleep(2)
-threads = []
-port1 = 8400
-port2 = 30302
-port3 = 4898
-chainid = int(sys.argv[1])
-#start_nodes(nodes[0], 8400, 30302, 4898, 8771)
-for node in nodes:
-  thread = threading.Thread(target=start_nodes, args=(node, port1, port2, port3, chainid))
-  port1 += 1
-  port2 += 1
-  port3 += 1
-  threads.append(thread)
-  thread.start()
-monitor_bootnode_thread.join()
-bootnode.terminate()
-bootnode.wait()
+  #monitor_bootnode_thread = threading.Thread(target=monitor_bootnode, args=(bootnode,))
+  #monitor_bootnode_thread.start()
+  time.sleep(2)
+  threads = []
+  port1 = 8400
+  port2 = 30302
+  port3 = 4898
+  if len(sys.argv) == 3:
+    port1 += int(sys.argv[2])
+    port2 += int(sys.argv[2])
+    port3 += int(sys.argv[2])
+    
+  chainid = int(sys.argv[1])
+  #with open("chain_id.txt", "r") as f:
+    #chainid = int(f.read().strip())
+  #start_nodes(nodes[0], 8400, 30302, 4898, 8771)
+  for node in nodes:
+    start_nodes(node, port1, port2, port3, chainid)
+    port1 += 1
+    port2 += 1
+    port3 += 1
+  #monitor_bootnode_thread.join()
+  #bootnode.terminate()
+  #bootnode.wait()
+if __name__ == "__main__":
+  main()
