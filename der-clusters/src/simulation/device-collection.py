@@ -3,7 +3,6 @@ import multiprocessing
 import os
 import time
 import random
-import subprocess
 from src.utils.devices import get_device_name_map
 
 
@@ -95,20 +94,11 @@ if __name__ == "__main__":
     processes = []
 
     try:
-        node_num = 1
         for device_name in device_names:
-            result = subprocess.run(['python3', 'auto-geth-setup/geth_account_setup.py', '1', f'{node_num}'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print("Output:", result.stdout)
-            print("Errors:", result.stderr)
-            
             process = start_device(device_name, args.meter_origin)
             processes.append(process)
             print(f"[{device_name}] Started with PID {process.pid}")
-            node_num += 1
-        genesis = subprocess.run(['python3', 'auto-geth-setup/make_genesis.py', '6', '87777', '0'])
-        init_geth = subprocess.run(['python3', 'auto-geth-setup/init_geth.py'])
-        bootnode = subprocess.run(['python3', 'auto-geth-setup/create_bootnode.py'])
-        run_nodes = subprocess.run(['python3', 'auto-geth-setup/run_nodes.py', '87777'])
+        
         # Keep running until user interrupts
         while True:
             time.sleep(1)

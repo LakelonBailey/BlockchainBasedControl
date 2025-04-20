@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import asyncio
+import subprocess
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from src.utils.server import CentralServerAPI
@@ -14,6 +15,39 @@ TRANSACTION_BUFFER_SIZE = 10
 
 # Interval in seconds by which the meter will ping the central server
 PING_INTERVAL = 10
+
+def make_enode_json():
+  """
+  This is how the config.toml file should look
+  [Node.P2P]
+  StaticNodes = [
+    "enode://2b775bc162310dea781618d1ffc25477289460891565043ab899bc83d2ec1b166deea94d713a94611bf1abbbeec1fdf57b07aa2c6c604edda4039deeaf490951@138.197.32.246:30303?discport=30306",
+    "enode://2df673c2cfa6a9696dda8cf2878373500ccfac39910f3869d2e61efdf5d51bab8b7a4310caee522db65d578ae0cfc64b87d3cd7470844ee2ae58fa645ac1c817@134.209.41.49:30301?discport=30310"
+  ]
+  """
+  enode_file = os.path.join(os.getcwd, "enodes.json")
+  with open(enode_file, "r") as file:
+    enodes = json.load(file)
+  config = {
+    "Node.P2P":{
+      "StaticNodes": enodes
+    }
+  }
+  #the config file will go in the data folder of the geth node, this dir is for the current docker setup
+  config_file = os.path.join('/app/auto-geth-setup/geth_node/data', "config.toml")
+  with open(config_file, "w") as file:
+    file.write("[P2P]\n")
+    file.write("StaticNodes = [\n")
+    for enode in enodes:
+      file.write(f'  "{enode}",\n')
+    file.write("]\n")
+
+def geth_setup(port1, port2, port3, port4, networkid, is_auth='n'):
+  subprocess.Popen(['python3', '../../auto-geth-setup/geth_accout_setup.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  subprocess.Popen(['python3', '../../auto-geth-setup/init_geth.py', f'{port1}'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  #subprocess.Popen(['python3', '../../auto-geth-setup/make_config_file.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  subprocess.Popen(['python3', '../../auto-geth-setup/run_node.py', f'{port1}', f'{port2}', f'{port3}', f'{port4}', f'{networkid}', f'{is_auth}'])
+
 
 # FastAPI app
 app = FastAPI()

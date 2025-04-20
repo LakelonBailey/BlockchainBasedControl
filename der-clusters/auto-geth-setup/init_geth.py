@@ -1,50 +1,58 @@
 import os
 import subprocess
+import requests
+import sys
 
-def init_geth(nodes: list):
+"""
+This will initialize the node in geth_node with the genesis file
+This also assumes the genesis file will be called "genesis.json"
+For nodes to peer with eachother they will compare the genesis file they
+were initialized on.
+This will also get the enode and write it to enode.txt for the node
+"""
+def init_geth(port):
+  #set up the directory pathing
   abs_dir = os.path.dirname(os.path.abspath(__file__))
-  for node in nodes:
-    
-    node_data_dir = f'{node}/data'
-    #print(node_data_dir)
-    #input()
-    print(f'initializing {node}')
-    result = subprocess.run(f'geth --datadir {node_data_dir} init {abs_dir}/genesis.json', shell=True, capture_output=True, text=True)
-    if result.returncode == 0:
-      print(f'Succesfully initialized {node}')
- 
-def get_sub_dirs():
-  abs_dir = os.path.dirname(os.path.abspath(__file__))
-  dir =  [f.path for f in os.scandir(f'{abs_dir}/geth_accounts') if f.is_dir()]
-  #for i in range(len(dir)):
-    #dir[i] = dir[i][16:] #./geth_accounts/ is 16 chars
-  return dir
-
+  node_dir = f'{abs_dir}/geth_node'
+  data_dir = f'{abs_dir}/geth_node/data'
+  print(node_dir)
+  
+  #initialize the node with geth init
+  result = subprocess.run(f'geth --datadir {data_dir} init {abs_dir}/genesis.json', shell=True, capture_output=True, text=True)
+  if result.returncode == 0:
+    print('Successfully initialized the geth node')
+  
+  #craft the enode the format is:
+  #enode://<unique_enode_value>@<public_ip>:<port>?discport=0
+  #request ifconfig.me to get public 
+  #NEED TO PASS THE PORT AS AN ARG SINCE PORTS CANT OVERLAP
+  #SAME AS --port FLAG WHEN STARTING GETH
+  #need to pass the ip as --nat extip:<public_ip>
+  try:
+    response = requests.get('https://ifconfig.me')
+    public_ip = response.text.strip()
+    print(f"IP: {public_ip}")
+  except requests.RequestException as e:
+    print(f'Error getting public IP: {e}')
+  nodekey_file = os.path.join(data_dir, "geth/nodekey")
+  print(nodekey_file)
+  enode_cmd_result = subprocess.run(f"bootnode -nodekey {nodekey_file} -writeaddress", capture_output=True, text=True, check=True, shell=True)
+  enode = f"enode://{enode_cmd_result.stdout.strip()}@{public_ip}:{port}?discport=0"
+  print(f"enode: {enode}")
+  enode_file = os.path.join(node_dir, "enode.txt")
+  with open(enode_file, "w") as file:
+    file.write(enode)
+  
 def main():
-  abs_dir = os.path.dirname(os.path.abspath(__file__))
-  
-  #if len(sys.argv) != 2:
-    #print(f'!!!USAGE: python init_geth.py <node_name1>,<node_name2>,... This should be the 3rd program ran. Same node names no spaces as arg!!!')
-    #exit(1)
-  #nodes = sys.argv[1].split(',')
-  nodes = get_sub_dirs()
-  #input('get_sub_dirs end')
-  #print(nodes)
-  genesis_file = './genesis.json'
-  for node in nodes:
-    print(node)
-    #input()
-    #print(abs_dir)
-    #print(f'node-------> {node}')
-    node_dir = os.path.join(abs_dir, f'geth_accounts/')
-    if os.path.isdir(f'{node}') == False:
-      print(f'Error: The node, {node}, is not a currently existing node. Exiting...')
-      exit(1)
-  if os.path.exists(f'{abs_dir}/{genesis_file}') == False:
-    print(f'Genesis file can not be found. Run make_genesis.py to create one. Exiting')
+  if len(sys.argv) != 2:
+    print(f"USAGE: python init_geth.py <port>")
     exit(1)
-  print(nodes)
-  init_geth(nodes)
-  
+  abs_dir = os.path.dirname(os.path.abspath(__file__))
+  genesis_file = "genesis.json"
+  if os.path.exists(f'{abs_dir}/{genesis_file}') == False:
+    print(f'Genesis file can not be found. the file should be named genesis.json and in the dir: {abs_dir}')
+    exit(1)
+  init_geth(str(sys.argv[1]))
+
 if __name__ == "__main__":
-  main()
+  main()  
