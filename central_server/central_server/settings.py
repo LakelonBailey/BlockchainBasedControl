@@ -31,6 +31,8 @@ else:
     DEBUG = False
 
 INSTALLED_APPS = [
+    "channels",
+    "daphne",
     "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -43,6 +45,7 @@ INSTALLED_APPS = [
     "api",
     "central_server",
 ]
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -79,7 +82,14 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "central_server.wsgi.application"
+ASGI_APPLICATION = "central_server.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
+
 
 DATABASES = {
     "default": {
@@ -92,11 +102,18 @@ DATABASES = {
     }
 }
 
+AUTHENTICATION_BACKENDS = (
+    "oauth2_provider.backends.OAuth2Backend",
+    "django.contrib.auth.backends.ModelBackend",
+)
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.\
-UserAttributeSimilarityValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation.\
+UserAttributeSimilarityValidator"
+        ),
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",

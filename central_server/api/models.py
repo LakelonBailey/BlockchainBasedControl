@@ -35,6 +35,7 @@ class SmartMeter(BaseModel):
     registered_at = models.DateTimeField(auto_now_add=True)
     raw_client_secret = models.CharField(max_length=100, null=True)
     last_ping_ts = models.DateTimeField(null=True)
+    enode = models.CharField(max_length=1000, null=True)
 
     def __str__(self):
         return str(self.application.client_id)

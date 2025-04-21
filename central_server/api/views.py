@@ -9,15 +9,28 @@ from .serializers import (
     BatchTransactionUploadSerializer,
     TransactionSerializer,
     SmartMeterCredentialSerializer,
+    SmartMeterSerializer,
+    SmartMeterAnalysisSerializer,
 )
 from .models import SmartMeter, Transaction, ClusterRegistration
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication, TokenHasScope
 from django.utils import timezone
 import secrets
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from django.shortcuts import get_object_or_404
+from django.db import models
+
+
+class SmartMeterDetailView(APIView):
+    def get(self, request, smart_meter_id):
+        smart_meter = get_object_or_404(SmartMeter, pk=smart_meter_id)
+        serializer = SmartMeterAnalysisSerializer(smart_meter)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # Custom pagination class using 'page' and 'limit' query parameters
-class TransactionPagination(PageNumberPagination):
+class GeneralPagination(PageNumberPagination):
     page_size = 10  # default items per page
     page_query_param = "page"  # for the current page number (default)
     page_size_query_param = "limit"  # allows client to set page size using "limit"
@@ -27,7 +40,22 @@ class TransactionPagination(PageNumberPagination):
 class TransactionListAPIView(generics.ListAPIView):
     queryset = Transaction.objects.all().order_by("-timestamp")
     serializer_class = TransactionSerializer
-    pagination_class = TransactionPagination
+    pagination_class = GeneralPagination
+
+    # Require OAuth2 authentication with the 'openid' scope.
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [permissions.IsAuthenticated, TokenHasScope]
+    required_scopes = ["openid"]
+
+
+class SmartMeterListAPIView(generics.ListAPIView):
+    queryset = (
+        SmartMeter.objects.all()
+        .order_by("-last_ping_ts")
+        .annotate(total_transactions=models.Count("transactions", distinct=True))
+    )
+    serializer_class = SmartMeterSerializer
+    pagination_class = GeneralPagination
 
     # Require OAuth2 authentication with the 'openid' scope.
     authentication_classes = [OAuth2Authentication]
@@ -40,11 +68,33 @@ class SmartMeterPingView(APIView):
     permission_classes = [TokenHasScope]
     required_scopes = ["transactions:upload"]
 
-    def post(self, request: Request):
+    def post(self, request):
         current_time = timezone.now()
-        SmartMeter.objects.filter(application=request.auth.application).update(
-            last_ping_ts=current_time
-        )
+        smart_meter = SmartMeter.objects.filter(
+            application=request.auth.application
+        ).first()
+
+        if smart_meter:
+            smart_meter.last_ping_ts = current_time
+            smart_meter.save(update_fields=["last_ping_ts"])
+
+            # Send a message to the "meter_status" group.
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                "meter_status",
+                {
+                    "type": "meter_status",
+                    "data": {
+                        "timestamp": current_time.isoformat(),
+                        "smart_meter_id": str(smart_meter.uuid),
+                        "last_ping_ts": smart_meter.last_ping_ts.isoformat(),
+                        "total_transactions": (
+                            Transaction.objects.filter(smart_meter=smart_meter).count()
+                        ),
+                    },
+                },
+            )
+
         return Response(status=status.HTTP_200_OK)
 
 
@@ -56,8 +106,6 @@ class BatchTransactionUploadView(APIView):
     def post(self, request: Request):
         serializer = BatchTransactionUploadSerializer(data=request.data)
         smart_meter = SmartMeter.objects.get(application=request.auth.application)
-        smart_meter.last_ping_ts = timezone.now()
-        smart_meter.save(update_fields=["last_ping_ts"])
         if serializer.is_valid():
             transactions = serializer.validated_data.get("transactions", [])
             transaction_objects = [

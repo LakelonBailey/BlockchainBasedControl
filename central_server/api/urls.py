@@ -5,6 +5,8 @@ from .views import (
     BatchTransactionUploadView,
     TransactionListAPIView,
     SmartMeterPingView,
+    SmartMeterListAPIView,
+    SmartMeterDetailView,
 )
 
 urlpatterns = [
@@ -14,6 +16,12 @@ urlpatterns = [
         name="batch-transaction-upload",
     ),
     path("transactions/", TransactionListAPIView.as_view(), name="transaction_list"),
+    path("meters/", SmartMeterListAPIView.as_view(), name="smart_meter_list"),
+    path(
+        "meters/<int:smart_meter_id>/analysis/",
+        SmartMeterDetailView.as_view(),
+        name="smart-meter-analysis",
+    ),
     path("register/", ClusterRegistrationView.as_view(), name="cluster_registration"),
     path("ping/", SmartMeterPingView.as_view(), name="smart_meter_ping"),
 ]
