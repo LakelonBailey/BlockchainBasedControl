@@ -5,7 +5,9 @@ import yaml
 import requests
 
 
-def fetch_client_credentials(central_server_origin, registration_token):
+def fetch_client_credentials(
+    central_server_origin: str, registration_token: str
+) -> list[dict]:
     url = f"{central_server_origin}/api/register/"  # Change this if needed
     response = requests.post(url, json={"registration_token": registration_token})
     if response.status_code != 200:
@@ -15,7 +17,7 @@ def fetch_client_credentials(central_server_origin, registration_token):
     return data["clients"]
 
 
-def build_compose_yaml(clients, central_server_origin, base_port):
+def build_compose_yaml(clients: list[dict], central_server_origin: str, base_port: int):
     services = {}
 
     for i, client in enumerate(clients, start=1):
@@ -41,7 +43,7 @@ def build_compose_yaml(clients, central_server_origin, base_port):
     }
 
 
-def run_docker_compose(compose_dict, stop=False):
+def run_docker_compose(compose_dict: dict, stop: bool = False):
     yaml_bytes = yaml.dump(compose_dict).encode("utf-8")
     command = (
         ["docker", "compose", "-f", "-", "down"]
