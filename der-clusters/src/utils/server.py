@@ -46,6 +46,10 @@ class CentralServerAPI:
 
         return await self.client.post(url, json=payload, headers=headers)
 
+    async def get(self, url: str):
+        headers = {"Authorization": f"Bearer {await self.get_access_token()}"}
+        return await self.client.get(url, headers=headers)
+
     async def ping(self):
         """
         Ping the server to communicate uptime.

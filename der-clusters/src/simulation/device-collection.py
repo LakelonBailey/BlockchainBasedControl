@@ -3,16 +3,16 @@ import multiprocessing
 import os
 import time
 import random
-
 from src.utils.devices import get_device_name_map
 
 
 def run_device_cmd(device_name: str, meter_origin: str):
+    nodes = []
     """
     Top-level function that will be used as the target in multiprocessing.
     """
     os.system(
-        f"python -m src.simulation.device --device {device_name} "
+        f"python3 -m src.simulation.device --device {device_name} "
         f"--meter-origin {meter_origin}"
     )
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
             process = start_device(device_name, args.meter_origin)
             processes.append(process)
             print(f"[{device_name}] Started with PID {process.pid}")
-
+        
         # Keep running until user interrupts
         while True:
             time.sleep(1)

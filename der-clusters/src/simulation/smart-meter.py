@@ -2,15 +2,18 @@ import os
 import json
 import logging
 import asyncio
+import subprocess
+import requests
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from src.utils.server import CentralServerAPI
 
 CLIENT_ID = os.environ["CLIENT_ID"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
+CHAIN_ID = os.environ.get("CHAIN_ID", None)
 
 # Number of transactions to buffer before a batch upload.
-TRANSACTION_BUFFER_SIZE = 10
+TRANSACTION_BUFFER_SIZE = 50
 
 # Interval in seconds by which the meter will ping the central server
 PING_INTERVAL = 10
@@ -31,7 +34,65 @@ transactions = []
 transaction_lock = asyncio.Lock()
 
 # Create a separate CentralServerAPI instance for pinging in the background
-ping_api = CentralServerAPI(CLIENT_ID, CLIENT_SECRET, scope="transactions:upload")
+global_server_api = CentralServerAPI(CLIENT_ID, CLIENT_SECRET, scope="smart_meter")
+
+
+async def upload_enode(enode: str) -> requests.Response:
+    return await global_server_api.post(f"/api/enodes/", {"enode": enode})
+
+
+async def get_enodes() -> requests.Response:
+    response = await global_server_api.get("/api/enodes/")
+    return response.json()
+
+
+def make_enode_json():
+    """
+    This is how the config.toml file should look
+    [Node.P2P]
+    StaticNodes = [
+      "enode://2b775bc162310dea781618d1ffc25477289460891565043ab899bc83d2ec1b166deea94d713a94611bf1abbbeec1fdf57b07aa2c6c604edda4039deeaf490951@138.197.32.246:30303?discport=30306",
+      "enode://2df673c2cfa6a9696dda8cf2878373500ccfac39910f3869d2e61efdf5d51bab8b7a4310caee522db65d578ae0cfc64b87d3cd7470844ee2ae58fa645ac1c817@134.209.41.49:30301?discport=30310"
+    ]
+    """
+    enode_file = os.path.join(os.getcwd, "enodes.json")
+    with open(enode_file, "r") as file:
+        enodes = json.load(file)
+    config = {"Node.P2P": {"StaticNodes": enodes}}
+    # the config file will go in the data folder of the geth node, this dir is for the current docker setup
+    config_file = os.path.join("/app/auto-geth-setup/geth_node/data", "config.toml")
+    with open(config_file, "w") as file:
+        file.write("[P2P]\n")
+        file.write("StaticNodes = [\n")
+        for enode in enodes:
+            file.write(f'  "{enode}",\n')
+        file.write("]\n")
+
+
+def geth_setup(port1, port2, port3, port4, is_auth="n"):
+    subprocess.Popen(
+        ["python3", "../../auto-geth-setup/geth_accout_setup.py"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    subprocess.Popen(
+        ["python3", "../../auto-geth-setup/init_geth.py", f"{port1}"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    # subprocess.Popen(['python3', '../../auto-geth-setup/make_config_file.py'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.Popen(
+        [
+            "python3",
+            "../../auto-geth-setup/run_node.py",
+            f"{port1}",
+            f"{port2}",
+            f"{port3}",
+            f"{port4}",
+            f"{CHAIN_ID}",
+            f"{is_auth}",
+        ]
+    )
 
 
 @app.on_event("startup")
@@ -49,7 +110,7 @@ async def ping_loop():
     """
     while True:
         try:
-            await ping_api.ping()
+            await global_server_api.ping()
             logger.info("CentralServerAPI ping successful.")
         except Exception as e:
             logger.error(f"CentralServerAPI ping failed: {e}")
@@ -68,7 +129,7 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
     logger.info(f"Device Connected | ID: {device_id}")
 
     # This API object is used just for posting transactions from this device
-    server_api = CentralServerAPI(CLIENT_ID, CLIENT_SECRET, scope="transactions:upload")
+    server_api = CentralServerAPI(CLIENT_ID, CLIENT_SECRET, scope="smart_meter")
 
     try:
         while True:
@@ -115,3 +176,6 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
 async def get_connected_devices():
     """Retrieve the latest connected devices."""
     return list(connected_devices)
+
+
+print(get_enodes())

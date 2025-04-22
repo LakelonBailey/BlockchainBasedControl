@@ -42,12 +42,12 @@ OIDC_RSA_PRIVATE_KEY_BASE64=<base64 encoded private key. Just ask ChatGPT how to
 
 2. Run database migration to set database state: `python manage.py migrate`
 3. Create a superuser for yourself: `python manage.py createsuperuser`
-4. Run local server: `python manage.py runserver 8080`
-5. Test that django setup worked properly by visiting `http://localhost:8080/admin` and logging in with your superuser credentials.
+4. Run local server: `python manage.py runserver 8000`
+5. Test that django setup worked properly by visiting `http://localhost:8000/admin` and logging in with your superuser credentials.
 
 #### Adding a cluster registration token
 
-1. Go to `http://localhost:8080/admin/api/clusterregistration/`
+1. Go to `http://localhost:8000/admin/api/clusterregistration/`
 2. Click **Add Cluster Registration**
 3. Fill out the form. For now, set the "Quantity" field to 3.
 4. After creating the cluster registration, go to edit the same registration and copy the "Token" field.

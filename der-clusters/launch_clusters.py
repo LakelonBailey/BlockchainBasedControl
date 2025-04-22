@@ -17,7 +17,7 @@ def fetch_client_credentials(
     return data["clients"]
 
 
-def build_compose_yaml(clients: list[dict], central_server_origin: str, base_port: int):
+def build_compose_yaml(clients, central_server_origin, base_port, chain_id):
     services = {}
 
     for i, client in enumerate(clients, start=1):
@@ -33,6 +33,7 @@ def build_compose_yaml(clients: list[dict], central_server_origin: str, base_por
                 f"{central_server_origin.replace('localhost', 'host.docker.internal')}",
                 f"CLIENT_ID={client['client_id']}",
                 f"CLIENT_SECRET={client['client_secret']}",
+                f"CHAIN_ID={chain_id}",
             ],
         }
 
@@ -62,12 +63,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Launch or stop DER clusters using a registration token"
     )
-    parser.add_argument(
-        "--registration-token", required=True, help="Registration token"
-    )
+    parser.add_argument("registration_token", type=str, help="Registration token")
+    parser.add_argument("--chain_id", type=int, help="chain id number for your chain")
     parser.add_argument(
         "--central-server-origin",
-        default="http://localhost:8080",
+        default="http://localhost:8000",
         help="Origin URL for the central server",
     )
     parser.add_argument(
@@ -79,14 +79,16 @@ def main():
     parser.add_argument(
         "--stop", action="store_true", help="Stop the running DER cluster containers"
     )
-
     args = parser.parse_args()
 
     clients = fetch_client_credentials(
         args.central_server_origin, args.registration_token
     )
     compose_dict = build_compose_yaml(
-        clients, args.central_server_origin, args.base_port
+        clients,
+        args.central_server_origin,
+        args.base_port,
+        args.chain_id,
     )
     run_docker_compose(compose_dict, stop=args.stop)
 
