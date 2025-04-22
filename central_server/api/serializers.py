@@ -94,3 +94,7 @@ class TransactionUploadSerializer(serializers.Serializer):
 
 class BatchTransactionUploadSerializer(serializers.Serializer):
     transactions = TransactionUploadSerializer(many=True)
+
+
+class SmartMeterEnodeUploadSerializer(serializers.Serializer):
+    enode = serializers.CharField()

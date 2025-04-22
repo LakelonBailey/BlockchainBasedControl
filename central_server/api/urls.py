@@ -7,6 +7,7 @@ from .views import (
     SmartMeterPingView,
     SmartMeterListAPIView,
     SmartMeterDetailView,
+    SmartMeterEnodeApiView,
 )
 
 urlpatterns = [
@@ -24,4 +25,5 @@ urlpatterns = [
     ),
     path("register/", ClusterRegistrationView.as_view(), name="cluster_registration"),
     path("ping/", SmartMeterPingView.as_view(), name="smart_meter_ping"),
+    path("enodes/", SmartMeterEnodeApiView.as_view(), name="smart_meter_enodes"),
 ]

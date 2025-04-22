@@ -136,7 +136,7 @@ REST_FRAMEWORK = {
 OAUTH2_PROVIDER_APPLICATION_MODEL = "oauth2_provider.Application"
 OAUTH2_PROVIDER = {
     "SCOPES": {
-        "transactions:upload": "Allows uploading of transactions",
+        "smart_meter": "Allows uploading of transactions",
         "openid": "OpenID",
     },
     "AUTHORIZATION_CODE_EXPIRE_SECONDS": 600,

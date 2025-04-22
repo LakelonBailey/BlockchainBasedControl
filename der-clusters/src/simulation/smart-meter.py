@@ -38,15 +38,33 @@ global_server_api = CentralServerAPI(CLIENT_ID, CLIENT_SECRET, scope="smart_mete
 
 
 async def upload_enode(enode: str) -> requests.Response:
-    return await global_server_api.post(f"/api/enodes/", {"enode": enode})
+    """
+    Sets the 'enode' field on the smart meter related to the given client id
+    and client secret.
+
+    Example usage:
+    ```
+    await upload_enode("enode://blahblablah@host:port")
+    ```
+    """
+    return await global_server_api.post("/api/enodes/", {"enode": enode})
 
 
-async def get_enodes() -> requests.Response:
+async def get_enodes() -> list[str]:
+    """
+    Returns the comprehensive enode list according to what is currently
+    in the database.
+
+    Example usage:
+    ```
+    enode_list = await get_enodes()
+    ```
+    """
     response = await global_server_api.get("/api/enodes/")
-    return response.json()
+    return response.json()["enodes"]
 
 
-def make_enode_json():
+async def make_enode_json():
     """
     This is how the config.toml file should look
     [Node.P2P]

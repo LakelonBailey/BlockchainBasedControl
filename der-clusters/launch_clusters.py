@@ -67,7 +67,7 @@ def main():
     parser.add_argument("--chain_id", type=int, help="chain id number for your chain")
     parser.add_argument(
         "--central-server-origin",
-        default="http://localhost:8000",
+        default="http://localhost:8080",
         help="Origin URL for the central server",
     )
     parser.add_argument(

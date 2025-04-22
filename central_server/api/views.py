@@ -11,6 +11,7 @@ from .serializers import (
     SmartMeterCredentialSerializer,
     SmartMeterSerializer,
     SmartMeterAnalysisSerializer,
+    SmartMeterEnodeUploadSerializer,
 )
 from .models import SmartMeter, Transaction, ClusterRegistration
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication, TokenHasScope
@@ -63,10 +64,39 @@ class SmartMeterListAPIView(generics.ListAPIView):
     required_scopes = ["openid"]
 
 
+class SmartMeterEnodeApiView(APIView):
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [TokenHasScope]
+    required_scopes = ["smart_meter"]
+
+    def get(self, _: Request):
+        enodes = list(
+            SmartMeter.objects.filter(enode__isnull=False).values_list(
+                "enode", flat=True
+            )
+        )
+        return Response({"enodes": enodes}, status=status.HTTP_200_OK)
+
+    def post(self, request: Request):
+        serializer = SmartMeterEnodeUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            smart_meter, _ = SmartMeter.objects.get_or_create(
+                application=request.auth.application
+            )
+            smart_meter.enode = serializer.validated_data.get("enode")
+            smart_meter.save(update_fields=["enode"])
+
+            return Response(
+                {"message": "Enode uploaded successfully."},
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class SmartMeterPingView(APIView):
     authentication_classes = [OAuth2Authentication]
     permission_classes = [TokenHasScope]
-    required_scopes = ["transactions:upload"]
+    required_scopes = ["smart_meter"]
 
     def post(self, request):
         current_time = timezone.now()
@@ -101,7 +131,7 @@ class SmartMeterPingView(APIView):
 class BatchTransactionUploadView(APIView):
     authentication_classes = [OAuth2Authentication]
     permission_classes = [TokenHasScope]
-    required_scopes = ["transactions:upload"]
+    required_scopes = ["smart_meter"]
 
     def post(self, request: Request):
         serializer = BatchTransactionUploadSerializer(data=request.data)
