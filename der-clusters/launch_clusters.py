@@ -64,10 +64,10 @@ def main():
         description="Launch or stop DER clusters using a registration token"
     )
     parser.add_argument("registration_token", type=str, help="Registration token")
-    parser.add_argument("--chain_id", type=int, help="chain id number for your chain")
+    parser.add_argument("--chain-id", type=int, help="chain id number for your chain")
     parser.add_argument(
         "--central-server-origin",
-        default="http://localhost:8080",
+        default="http://localhost:8000",
         help="Origin URL for the central server",
     )
     parser.add_argument(
