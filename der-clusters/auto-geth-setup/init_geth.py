@@ -12,13 +12,13 @@ This will also get the enode and write it to enode.txt for the node
 """
 def init_geth(port):
   #set up the directory pathing
-  abs_dir = os.path.dirname(os.path.abspath(__file__))
-  node_dir = f'{abs_dir}/geth_node'
-  data_dir = f'{abs_dir}/geth_node/data'
+
+  node_dir = f'/app/auto-geth-setup/geth_node'
+  data_dir = f'/app/auto-geth-setup/geth_node/data'
   print(node_dir)
   
   #initialize the node with geth init
-  result = subprocess.run(f'geth --datadir {data_dir} init {abs_dir}/genesis.json', shell=True, capture_output=True, text=True)
+  result = subprocess.run(f'geth --datadir {data_dir} init /app/auto-geth-setup/genesis.json', shell=True, capture_output=True, text=True)
   if result.returncode == 0:
     print('Successfully initialized the geth node')
   
@@ -39,7 +39,7 @@ def init_geth(port):
   enode_cmd_result = subprocess.run(f"bootnode -nodekey {nodekey_file} -writeaddress", capture_output=True, text=True, check=True, shell=True)
   enode = f"enode://{enode_cmd_result.stdout.strip()}@{public_ip}:{port}?discport=0"
   print(f"enode: {enode}")
-  enode_file = os.path.join(node_dir, "enode.txt")
+  enode_file = os.path.join('/app/auto-geth-setup/geth_node', "enode.txt")
   with open(enode_file, "w") as file:
     file.write(enode)
   
@@ -47,10 +47,9 @@ def main():
   if len(sys.argv) != 2:
     print(f"USAGE: python init_geth.py <port>")
     exit(1)
-  abs_dir = os.path.dirname(os.path.abspath(__file__))
   genesis_file = "genesis.json"
-  if os.path.exists(f'{abs_dir}/{genesis_file}') == False:
-    print(f'Genesis file can not be found. the file should be named genesis.json and in the dir: {abs_dir}')
+  if os.path.exists(f'/app/auto-geth-setup/{genesis_file}') == False:
+    print(f'Genesis file can not be found. the file should be named genesis.json and in the dir: /app/auto-geth-setup')
     exit(1)
   init_geth(str(sys.argv[1]))
 

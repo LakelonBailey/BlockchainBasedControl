@@ -4,7 +4,7 @@ import os
 import shutil
 import secrets
 import string
-
+import time
 """
 IF A NODE FOLDER IS ALREADY EXISTING THIS WILL DELETE IT
 This will call the geth account new and save different information
@@ -18,8 +18,7 @@ key.txt      = name of the key file (is random) but needed to unlock account lat
 
 def create_geth_account(password: str):
     # sets up the node directory
-    abs_dir = os.path.dirname(os.path.abspath(__file__))
-    node_dir = os.path.join(abs_dir, f"geth_node/")
+    node_dir = os.path.join('/app/auto-geth-setup/', f"geth_node/")
     os.makedirs(node_dir, exist_ok=True)
 
     # makes the password file
@@ -74,6 +73,7 @@ def main():
     if os.path.isdir(f"geth_node"):
         shutil.rmtree(f"geth_node")
     create_geth_account(generate_password())
+    print("PLEASE BE FIRST")
 
 
 if __name__ == "__main__":
