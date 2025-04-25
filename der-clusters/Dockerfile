@@ -41,9 +41,6 @@ COPY . /app/
 COPY auto-geth-setup/geth_start.sh ./geth_start.sh
 RUN chmod +x ./geth_start.sh
 
-# Expose Smart Meter WebSocket port
-EXPOSE 8000
-
 # Run both the Smart Meter and Device Collection as modules
 CMD ["./geth_start.sh"]
 

@@ -25,12 +25,12 @@ def build_compose_yaml(clients, central_server_origin, base_port, chain_id):
         services[name] = {
             "build": {"context": ".", "dockerfile": "Dockerfile"},
             "container_name": name,
-            "networks": ["smart_grid"],
-            "ports": [f"{base_port + i + 1}:3000"],
+            "network_mode": "host",
+            # "networks": ["smart_grid"],
             "environment": [
-                f"METER_ORIGIN=ws://{name}:{base_port}",
-                f"CENTRAL_SERVER_ORIGIN="
-                f"{central_server_origin.replace('localhost', 'host.docker.internal')}",
+                f"METER_ORIGIN=ws://{name}:{base_port + i}",
+                f"METER_PORT={base_port + i}",
+                f"CENTRAL_SERVER_ORIGIN={central_server_origin}",
                 f"CLIENT_ID={client['client_id']}",
                 f"CLIENT_SECRET={client['client_secret']}",
                 f"CHAIN_ID={chain_id}",
@@ -40,7 +40,7 @@ def build_compose_yaml(clients, central_server_origin, base_port, chain_id):
     return {
         "version": "3.8",
         "services": services,
-        "networks": {"smart_grid": {"driver": "bridge"}},
+        # "networks": {"smart_grid": {"driver": "bridge"}},
     }
 
 
