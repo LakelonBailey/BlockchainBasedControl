@@ -4,14 +4,17 @@ import logging
 import asyncio
 import subprocess
 import requests
-import time
+import socket
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from src.utils.server import CentralServerAPI
 
 CLIENT_ID = os.environ["CLIENT_ID"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 CHAIN_ID = os.environ.get("CHAIN_ID", None)
-
+G_PORT = os.environ["G_PORT"]
+HTTP_PORT = os.environ["HTTP_PORT"]
+WS_PORT = os.environ["WS_PORT"]
+AUTH_RPC_PORT = os.environ["AUTH_RPC_PORT"]
 # Number of transactions to buffer before a batch upload.
 TRANSACTION_BUFFER_SIZE = 50
 
@@ -76,11 +79,6 @@ async def make_enode_json():
     
     
     
-    own_enode_file = "/app/auto-geth-setup/geth_node/enode.txt"
-    with open(own_enode_file, "r") as file:
-      own_enode = file.read()
-    logger.info(f"------------>{own_enode}") 
-    own = await upload_enode(own_enode)
     
     enodes = await get_enodes()
     logger.info(enodes)
@@ -99,12 +97,14 @@ async def make_enode_json():
         for enode in enodes:
             file.write(f'  "{enode}",\n')
         file.write("]\n")
+        
+    own_enode_file = "/app/auto-geth-setup/geth_node/enode.txt"
+    with open(own_enode_file, "r") as file:
+      own_enode = file.read()
+    logger.info(f"------------>{own_enode}") 
+    own = await upload_enode(own_enode)
     
-    """TODO
-        *Upload the enode
-        *make sure it pulls others properly
-        *Get it working on digital ocean vm
-        """
+    
 
 async def geth_setup_async(port1, is_auth="n"):
     account = await asyncio.create_subprocess_exec(
@@ -115,9 +115,10 @@ async def geth_setup_async(port1, is_auth="n"):
     async for line in account.stdout:
         print(line.decode(), end='')
     await account.wait()
- 
+    port = G_PORT  
+      
     init = await asyncio.create_subprocess_exec(
-        "python3", "/app/auto-geth-setup/init_geth.py", f"{port1}",
+        "python3", "/app/auto-geth-setup/init_geth.py", f"{G_PORT}",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
@@ -137,7 +138,7 @@ async def geth_setup_async(port1, is_auth="n"):
     await config.wait()
 
     proc = subprocess.Popen(
-        ["python3", "-u", "/app/auto-geth-setup/run_node.py", f"{port1}", f"{CHAIN_ID}", f"{is_auth}"],    stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True
+        ["python3", "-u", "/app/auto-geth-setup/run_node.py", f"{G_PORT}", f"{HTTP_PORT}", f"{WS_PORT}", f"{AUTH_RPC_PORT}", f"{CHAIN_ID}", f"{is_auth}"],    stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True
     )
     for line in proc.stdout:
       logger.info(f"[GETH]: {line.strip()}")

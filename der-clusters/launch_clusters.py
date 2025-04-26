@@ -3,7 +3,7 @@ import subprocess
 import sys
 import yaml
 import requests
-
+import socket
 
 def fetch_client_credentials(
     central_server_origin: str, registration_token: str
@@ -17,10 +17,14 @@ def fetch_client_credentials(
     return data["clients"]
 
 
+
 def build_compose_yaml(clients, central_server_origin, base_port, chain_id):
     services = {}
-
     for i, client in enumerate(clients, start=1):
+        geth_port = 30303 + i #port the geth node is broadcasting
+        http_port = 8545 + i #http geth console port 8545 + der cluster number
+        auth_rpc_port = 20900 + i #just need to define to prevent port conflicts
+        ws_port = 22000 + i #just need to define to prevent port conflicts
         name = f"der-cluster-{i}"
         services[name] = {
             "build": {"context": ".", "dockerfile": "Dockerfile"},
@@ -34,6 +38,10 @@ def build_compose_yaml(clients, central_server_origin, base_port, chain_id):
                 f"CLIENT_ID={client['client_id']}",
                 f"CLIENT_SECRET={client['client_secret']}",
                 f"CHAIN_ID={chain_id}",
+                f"G_PORT={geth_port}",
+                f"HTTP_PORT={http_port}",
+                f"AUTH_RPC_PORT={auth_rpc_port}",
+                f"WS_PORT={ws_port}"
             ],
         }
 

@@ -4,7 +4,7 @@ import sys
 import requests
 
 
-def start_nodes(port1, networkid, authourity=False):
+def start_nodes(port1, httpport, wsport, auth_rpc_port ,networkid, authourity=False):
     # start the node by first gathering the needed flags
     with open(f"/app/auto-geth-setup/geth_node/address.txt", "r") as file:
         address = file.read()
@@ -41,6 +41,8 @@ def start_nodes(port1, networkid, authourity=False):
             "--http",
             "--http.api",
             '"web3,admin,net,clique,eth,personal,miner"',
+            f"--http.port=",
+            str(httpport),
             "--nat",
             f"extip:{public_ip}",
             f"--networkid={networkid}",
@@ -49,6 +51,11 @@ def start_nodes(port1, networkid, authourity=False):
             str(config),
             "--mine",
             f"--miner.etherbase={address}",
+            "--ws.port",
+            str(wsport),
+            "--authrpc.port",
+            str(auth_rpc_port),
+            
         ]
     else:
         command = [
@@ -64,7 +71,9 @@ def start_nodes(port1, networkid, authourity=False):
             str(port1),  # THIS NEEDS TO BE THE SAME PORT AS DEFINED IN THE ENODE
             "--http",
             "--http.api",
-            '"web3,admin,net,eth,personal,miner"',
+            '"web3,admin,net,eth,personal"',
+            "--http.port",
+            str(httpport),
             "--nat",
             f"extip:{public_ip}",
             "--ws",
@@ -72,6 +81,10 @@ def start_nodes(port1, networkid, authourity=False):
             "--nodiscover",
             "--config",
             str(config),
+            "--ws.port",
+            str(wsport),
+            "--authrpc.port",
+            str(auth_rpc_port),
         ]
     for c in command:
         print(c, end=" ")
@@ -85,19 +98,22 @@ def start_nodes(port1, networkid, authourity=False):
 
 
 def main():
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 6:
         print(
-            "Usage: python run_node.py port1 networkid \
+            "Usage: python run_node.py port1 networkid http_port ws_port auth_rpc_port \
 is_authority(y/n)"
         )
         exit()
     port1 = sys.argv[1]
-    network_id = sys.argv[2]
+    http_port = sys.argv[2]
+    ws_port = sys.argv[3]
+    auth_rpc_port = sys.argv[4]
+    network_id = sys.argv[5]
     is_auth = False
-    if len(sys.argv) == 4:
-        if sys.argv[3].lower() in ["y", "yes"]:
+    if len(sys.argv) == 7:
+        if sys.argv[6].lower() in ["y", "yes"]:
             is_auth = True
-    start_nodes(port1, network_id, is_auth)
+    start_nodes(port1, http_port, ws_port, auth_rpc_port, network_id, is_auth)
 
 
 if __name__ == "__main__":
