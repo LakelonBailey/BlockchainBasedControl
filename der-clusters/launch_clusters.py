@@ -1,3 +1,4 @@
+import os
 import argparse
 import subprocess
 import sys
@@ -74,13 +75,13 @@ def main():
     parser.add_argument("--chain-id", type=int, help="chain id number for your chain")
     parser.add_argument(
         "--central-server-origin",
-        default="http://localhost:8000",
+        default=os.environ.get("CENTRAL_SERVER_ORIGIN", "http://localhost:8000"),
         help="Origin URL for the central server",
     )
     parser.add_argument(
         "--base-port",
         type=int,
-        default=8000,
+        default=int(os.environ.get("BASE_METER_PORT", 8001)),
         help="Base port number for cluster port mapping",
     )
     parser.add_argument(
