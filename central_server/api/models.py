@@ -8,32 +8,46 @@ def generate_provisioning_token():
 
 
 class BCOrder(BaseModel):
-    order_id = models.CharField(max_length=1000, null=False)
+    order_id = models.CharField(max_length=1000, unique=True, db_index=True)
+    order_type = models.CharField(
+        max_length=4,
+        choices=(
+            ("buy", "Buy"),
+            ("sell", "Sell"),
+        ),
+        null=False,
+    )
     state = models.CharField(
+        max_length=10,
         choices=(
             ("placed", "Placed"),
             ("matched", "Matched"),
             ("cancelled", "Cancelled"),
         ),
-        max_length=100,
         null=False,
         default="placed",
     )
-    total_amount = models.FloatField(null=False, default=0)
-    price = models.FloatField(null=False, default=0)
+    total_amount = models.DecimalField(max_digits=20, decimal_places=8, default=0)
+    filled_amount = models.DecimalField(max_digits=20, decimal_places=8, default=0)
+    price = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
     is_partial = models.BooleanField(default=True)
 
 
 class BCTransaction(BaseModel):
-    bc_order = models.ForeignKey(
+    order = models.ForeignKey(
         BCOrder,
         on_delete=models.CASCADE,
         related_name="transactions",
         null=False,
     )
-    amount = models.FloatField(default=0)
+    amount = models.DecimalField(max_digits=20, decimal_places=8)
     transaction_type = models.CharField(
-        null=True, choices=(("buy", "Buy"), ("sell", "Sell"))
+        max_length=4,
+        choices=(
+            ("buy", "Buy"),
+            ("sell", "Sell"),
+        ),
+        null=False,
     )
 
 

@@ -175,6 +175,16 @@ USE_I18N = True
 
 USE_TZ = True
 
+AUTHENTICATION_BACKENDS = (
+    "oauth2_provider.backends.OAuth2Backend",
+    "django.contrib.auth.backends.ModelBackend",
+)
+
+AUTHENTICATION_BACKEND_MAP = {
+    "default": "django.contrib.auth.backends.ModelBackend",
+    "oauth": "oauth2_provider.backends.OAuth2Backend",
+}
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/

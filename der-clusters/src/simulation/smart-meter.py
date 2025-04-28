@@ -4,7 +4,6 @@ import logging
 import asyncio
 import subprocess
 import requests
-import socket
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from src.utils.server import CentralServerAPI
 
@@ -15,8 +14,6 @@ G_PORT = os.environ["G_PORT"]
 HTTP_PORT = os.environ["HTTP_PORT"]
 WS_PORT = os.environ["WS_PORT"]
 AUTH_RPC_PORT = os.environ["AUTH_RPC_PORT"]
-# Number of transactions to buffer before a batch upload.
-TRANSACTION_BUFFER_SIZE = 50
 
 # Interval in seconds by which the meter will ping the central server
 PING_INTERVAL = 10
@@ -33,11 +30,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 connected_devices = set()
-transactions = []
-transaction_lock = asyncio.Lock()
 
 # Create a separate CentralServerAPI instance for pinging in the background
 global_server_api = CentralServerAPI(CLIENT_ID, CLIENT_SECRET, scope="smart_meter")
+
+
 async def upload_enode(enode: str) -> requests.Response:
     """
     Sets the 'enode' field on the smart meter related to the given client id
@@ -65,7 +62,6 @@ async def get_enodes() -> list[str]:
     return response.json()["enodes"]
 
 
-
 async def make_enode_json():
     """
     This is how the config.toml file should look
@@ -76,16 +72,12 @@ async def make_enode_json():
     ]
     """
 
-    
-    
-    
-    
     enodes = await get_enodes()
     logger.info(enodes)
-    
+
     enode_file = os.path.join("/app/auto-geth-setup/geth_node", "enodes.json")
     with open(enode_file, "w") as file:
-      json.dump(enodes, file)
+        json.dump(enodes, file)
     with open(enode_file, "r") as file:
         enodes = json.load(file)
     config = {"Node.P2P": {"StaticNodes": enodes}}
@@ -97,58 +89,75 @@ async def make_enode_json():
         for enode in enodes:
             file.write(f'  "{enode}",\n')
         file.write("]\n")
-        
+
     own_enode_file = "/app/auto-geth-setup/geth_node/enode.txt"
     with open(own_enode_file, "r") as file:
-      own_enode = file.read()
-    logger.info(f"------------>{own_enode}") 
+        own_enode = file.read()
+    logger.info(f"------------>{own_enode}")
     own = await upload_enode(own_enode)
-    
-    
+
 
 async def geth_setup_async(port1, is_auth="n"):
     account = await asyncio.create_subprocess_exec(
-        "python3", "-u", "/app/auto-geth-setup/geth_account_setup.py",
+        "python3",
+        "-u",
+        "/app/auto-geth-setup/geth_account_setup.py",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
     async for line in account.stdout:
-        print(line.decode(), end='')
+        print(line.decode(), end="")
     await account.wait()
-    port = G_PORT  
-      
+    port = G_PORT
+
     init = await asyncio.create_subprocess_exec(
-        "python3", "/app/auto-geth-setup/init_geth.py", f"{G_PORT}",
+        "python3",
+        "/app/auto-geth-setup/init_geth.py",
+        f"{G_PORT}",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
     async for line in init.stdout:
-        print(line.decode(), end='')
+        print(line.decode(), end="")
     await init.wait()
 
     await make_enode_json()
 
     config = await asyncio.create_subprocess_exec(
-        "python3", "-u", "/app/auto-geth-setup/make_config_file.py",
+        "python3",
+        "-u",
+        "/app/auto-geth-setup/make_config_file.py",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
     async for line in config.stdout:
-        print(line.decode(), end='')
+        print(line.decode(), end="")
     await config.wait()
 
     proc = subprocess.Popen(
-        ["python3", "-u", "/app/auto-geth-setup/run_node.py", f"{G_PORT}", f"{HTTP_PORT}", f"{WS_PORT}", f"{AUTH_RPC_PORT}", f"{CHAIN_ID}", f"{is_auth}"],    stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True
+        [
+            "python3",
+            "-u",
+            "/app/auto-geth-setup/run_node.py",
+            f"{G_PORT}",
+            f"{HTTP_PORT}",
+            f"{WS_PORT}",
+            f"{AUTH_RPC_PORT}",
+            f"{CHAIN_ID}",
+            f"{is_auth}",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
     for line in proc.stdout:
-      logger.info(f"[GETH]: {line.strip()}")
+        logger.info(f"[GETH]: {line.strip()}")
 
     exit_code = proc.wait()
     logger.error(f"[GETH exited with code {exit_code}]")
-    
+
     while True:
         await asyncio.sleep(10)
-
 
 
 @app.on_event("startup")
@@ -157,7 +166,7 @@ async def start_ping_task():
     On application startup, kick off an async task that pings the central server
     every 10 seconds.
     """
-    #asyncio.create_task(geth_setup_async(8900))
+    # asyncio.create_task(geth_setup_async(8900))
     asyncio.create_task(ping_loop())
 
 
@@ -170,7 +179,7 @@ async def ping_loop():
         try:
             await global_server_api.ping()
             logger.info("CentralServerAPI ping successful.")
-            
+
         except Exception as e:
             logger.error(f"CentralServerAPI ping failed: {e}")
 
@@ -187,9 +196,6 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
     connected_devices.add(device_id)
     logger.info(f"Device Connected | ID: {device_id}")
 
-    # This API object is used just for posting transactions from this device
-    server_api = CentralServerAPI(CLIENT_ID, CLIENT_SECRET, scope="smart_meter")
-
     try:
         while True:
             data = await websocket.receive_text()
@@ -198,27 +204,6 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
             energy_kwh = message["energy_kwh"]
             timestamp = message["timestamp"]
             device_type = message["device"]["type"]
-
-            batch = None
-            async with transaction_lock:
-                transactions.append(
-                    {
-                        "energy_kwh": energy_kwh,
-                        "transaction_type": device_type,
-                        "timestamp": timestamp,
-                    }
-                )
-                # If we hit the buffer size, upload the batch
-                if len(transactions) >= TRANSACTION_BUFFER_SIZE:
-                    batch = transactions.copy()
-                    transactions.clear()
-
-            if batch is not None:
-                try:
-                    await server_api.post_transactions(batch)
-                    logger.info(f"Uploaded {len(batch)} transactions.")
-                except Exception as e:
-                    logger.error(f"Failed to post transactions: {e}")
 
             # Log each energy transaction
             logger.info(
@@ -235,6 +220,3 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
 async def get_connected_devices():
     """Retrieve the latest connected devices."""
     return list(connected_devices)
-
-
-
