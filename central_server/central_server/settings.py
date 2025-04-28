@@ -27,8 +27,21 @@ if ENVIRONMENT == "local":
     BASE_URL = "http://localhost:8000"
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    ALLOWED_HOSTS = []
     DEBUG = False
+    BASE_URL = "https://blockchain.lakelon.dev"
+
+    ALLOWED_HOSTS = ["*"]
+
+    # only for local HTTP testing:
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+    CSRF_TRUSTED_ORIGINS = [
+        "https://blockchain.lakelon.dev",
+        "http://localhost:5173",
+    ]
+
+    CORS_ALLOW_ALL_ORIGINS = True
 
 INSTALLED_APPS = [
     "channels",
