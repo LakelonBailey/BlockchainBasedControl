@@ -76,8 +76,6 @@ class SignupView(View):
                 user = User(
                     username=email.lower(),
                 )
-                user.is_staff = True
-                user.is_superuser = True
                 user.set_password(password)
                 user.save()
             except IntegrityError as e:
