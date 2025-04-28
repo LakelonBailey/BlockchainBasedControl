@@ -157,7 +157,7 @@ OAUTH2_PROVIDER = {
     "AUTHORIZATION_CODE_EXPIRE_SECONDS": 600,
     "OIDC_ENABLED": True,  # Enable OIDC support
     "OIDC_ISS_ENDPOINT": f"{BASE_URL}/o/",  # OIDC issuer endpoint
-    "ALLOWED_SCHEMES": ["https", "http"] if ENVIRONMENT == "local" else ["https"],
+    "ALLOWED_SCHEMES": ["https", "http"],
     "OIDC_RSA_PRIVATE_KEY": OIDC_RSA_PRIVATE_KEY,
 }
 
