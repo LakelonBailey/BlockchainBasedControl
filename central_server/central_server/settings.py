@@ -16,6 +16,8 @@ if OIDC_RSA_PRIVATE_KEY_BASE64:
     OIDC_RSA_PRIVATE_KEY = base64.b64decode(OIDC_RSA_PRIVATE_KEY_BASE64).decode("utf-8")
 
 SECRET_KEY = os.environ["SECRET_KEY"]
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_ROOT = BASE_DIR / "static"
 
 
 if ENVIRONMENT == "local":
