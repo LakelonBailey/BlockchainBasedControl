@@ -4,6 +4,7 @@ import subprocess
 import sys
 import yaml
 import requests
+from dotenv import load_dotenv
 
 
 def fetch_client_credentials(
@@ -19,7 +20,12 @@ def fetch_client_credentials(
 
 
 def build_compose_yaml(
-    clients, central_server_origin, base_port, chain_id, auth_node_enodes
+    clients,
+    central_server_origin,
+    base_port,
+    chain_id,
+    auth_node_enodes,
+    disable_blockchain,
 ):
     services = {}
     for i, client in enumerate(clients, start=1):
@@ -45,6 +51,7 @@ def build_compose_yaml(
                 f"AUTH_RPC_PORT={auth_rpc_port}",
                 f"WS_PORT={ws_port}",
                 f"AUTH_ENODES={auth_node_enodes}",
+                f"DISABLE_BLOCKCHAIN={str(disable_blockchain).lower()}",
             ],
         }
 
@@ -71,6 +78,7 @@ def run_docker_compose(compose_dict: dict, stop: bool = False):
 
 
 def main():
+    load_dotenv()
     parser = argparse.ArgumentParser(
         description="Launch or stop DER clusters using a registration token"
     )
@@ -96,6 +104,11 @@ def main():
     parser.add_argument(
         "--stop", action="store_true", help="Stop the running DER cluster containers"
     )
+    parser.add_argument(
+        "--disable-blockchain",
+        action="store_true",
+        help="Prevents light nodes from being created and only simulates the devices.",
+    )
     args = parser.parse_args()
 
     clients = fetch_client_credentials(
@@ -107,6 +120,7 @@ def main():
         args.base_port,
         args.chain_id,
         args.auth_node_enodes,
+        args.disable_blockchain,
     )
     run_docker_compose(compose_dict, stop=args.stop)
 

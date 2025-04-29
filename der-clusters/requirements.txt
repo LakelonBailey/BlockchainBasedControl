@@ -10,6 +10,7 @@ httpx==0.28.1
 idna==3.10
 pydantic==2.10.6
 pydantic_core==2.27.2
+python-dotenv==1.1.0
 pytz==2025.1
 PyYAML==6.0.2
 requests==2.32.3

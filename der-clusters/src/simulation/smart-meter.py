@@ -15,6 +15,7 @@ HTTP_PORT = os.environ["HTTP_PORT"]
 WS_PORT = os.environ["WS_PORT"]
 AUTH_RPC_PORT = os.environ["AUTH_RPC_PORT"]
 AUTH_ENODES = os.environ["AUTH_ENODES"]
+DISABLE_BLOCKCHAIN = os.environ.get("DISABLE_BLOCKCHAIN", "false").lower() == "true"
 # Interval in seconds by which the meter will ping the central server
 PING_INTERVAL = 10
 
@@ -76,9 +77,9 @@ async def make_enode_json():
         own_enode = file.read()
     logger.info(f"------------>{own_enode}")
     own = await upload_enode(own_enode)
-    
+
     await asyncio.sleep(10)
-    
+
     enodes = await get_enodes()
     logger.info(enodes)
     enode_file = os.path.join("/app/auto-geth-setup/geth_node", "enodes.json")
@@ -88,19 +89,18 @@ async def make_enode_json():
         enodes = json.load(file)
     auth_enodes = AUTH_ENODES.split(",")
     for auth in auth_enodes:
-      enodes.append(auth)
+        enodes.append(auth)
     config = {"Node.P2P": {"StaticNodes": enodes}}
     # the config file will go in the data folder of the geth node, this dir is for the current docker setup
     config_file = os.path.join("/app/auto-geth-setup/geth_node/data", "config.toml")
     with open(config_file, "w") as file:
         file.write("[Node.P2P]\n")
         file.write("StaticNodes = [\n")
-        #file.write('  "enode://42f53e6061ecd2df46ea0b15ec70afb48508464ecb99ec213627526be42fc86559b0395b7405e493660fd71614c6e9773c267757b54bb44970ff470891d9321b@138.197.32.246:30303?discport=0",\n')
-        #file.write('  "enode://61df5fe2a47d32f4e3a2009c519b8f842b56b3c953c0cb014346afb3ad69ab77c23b1985e404c4324c19a4aaf95816610d451bbf3ef95fd787cbd7afd45cdb7d@209.97.156.6:30303?discport=0",\n')
+        # file.write('  "enode://42f53e6061ecd2df46ea0b15ec70afb48508464ecb99ec213627526be42fc86559b0395b7405e493660fd71614c6e9773c267757b54bb44970ff470891d9321b@138.197.32.246:30303?discport=0",\n')
+        # file.write('  "enode://61df5fe2a47d32f4e3a2009c519b8f842b56b3c953c0cb014346afb3ad69ab77c23b1985e404c4324c19a4aaf95816610d451bbf3ef95fd787cbd7afd45cdb7d@209.97.156.6:30303?discport=0",\n')
         for enode in enodes:
             file.write(f'  "{enode}",\n')
         file.write("]\n")
-
 
 
 async def geth_setup_async(port1, is_auth="n"):
@@ -180,7 +180,8 @@ async def ping_loop():
     """
     Periodically pings the central server in an infinite loop.
     """
-    asyncio.create_task(geth_setup_async(8900))
+    if not DISABLE_BLOCKCHAIN:
+        asyncio.create_task(geth_setup_async(8900))
     while True:
         try:
             await global_server_api.ping()
