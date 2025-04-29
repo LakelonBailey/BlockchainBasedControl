@@ -140,8 +140,7 @@ async def geth_setup_async(port1, is_auth="n"):
         print(line.decode(), end="")
     await config.wait()
 
-    proc = subprocess.Popen(
-        [
+    proc = await asyncio.create_subprocess_exec(
             "python3",
             "-u",
             "/app/auto-geth-setup/run_node.py",
@@ -151,16 +150,14 @@ async def geth_setup_async(port1, is_auth="n"):
             f"{AUTH_RPC_PORT}",
             f"{CHAIN_ID}",
             f"{is_auth}",
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
     )
-    for line in proc.stdout:
+    async for line in proc.stdout:
         logger.info(f"[GETH]: {line.strip()}")
-
-    exit_code = proc.wait()
-    logger.error(f"[GETH exited with code {exit_code}]")
+    await proc.wait()
+    
+    logger.error(f"[GETH exited with code {proc.returncode}]")
 
     while True:
         await asyncio.sleep(10)
