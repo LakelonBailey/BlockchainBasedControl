@@ -1,8 +1,65 @@
 # api/serializers.py
 from rest_framework import serializers
-from .models import Transaction
-from .models import SmartMeter
+from .models import Transaction, SmartMeter, BCOrder, BCTransaction
 from django.db.models import Sum
+from django.db import transaction
+
+
+class BCOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BCOrder
+        fields = [
+            "order_id",
+            "order_type",
+            "state",
+            "total_amount",
+            "filled_amount",
+            "price",
+            "is_partial",
+            "created_at",
+        ]
+        read_only_fields = ["filled_amount", "created_at"]
+
+
+class BCTransactionSerializer(serializers.ModelSerializer):
+    order_id = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = BCTransaction
+        fields = [
+            "order_id",
+            "amount",
+            "transaction_type",
+            "created_at",
+        ]
+        read_only_fields = ["transaction_type", "created_at"]
+
+    def create(self, validated_data):
+        order_id = validated_data.pop("order_id")
+        order = BCOrder.objects.get(order_id=order_id)
+        # Infer the opposite transaction type
+        transaction_type = "buy" if order.order_type == "sell" else "sell"
+        amount = validated_data["amount"]
+
+        with transaction.atomic():
+            tx = BCTransaction.objects.create(
+                order=order,
+                amount=amount,
+                transaction_type=transaction_type,
+            )
+            # Update filled amount and order state
+            order.filled_amount += amount
+            if order.filled_amount >= order.total_amount:
+                order.is_partial = False
+                order.state = "matched"
+            order.save()
+        return tx
+
+    def to_representation(self, instance):
+        # Include the related order's order_id in the response
+        data = super().to_representation(instance)
+        data["order_id"] = instance.order.order_id
+        return data
 
 
 class SmartMeterAnalysisSerializer(serializers.ModelSerializer):

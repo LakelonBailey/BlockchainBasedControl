@@ -7,6 +7,50 @@ def generate_provisioning_token():
     return secrets.token_urlsafe(32)
 
 
+class BCOrder(BaseModel):
+    order_id = models.CharField(max_length=1000, unique=True, db_index=True)
+    order_type = models.CharField(
+        max_length=4,
+        choices=(
+            ("buy", "Buy"),
+            ("sell", "Sell"),
+        ),
+        null=False,
+    )
+    state = models.CharField(
+        max_length=10,
+        choices=(
+            ("placed", "Placed"),
+            ("matched", "Matched"),
+            ("cancelled", "Cancelled"),
+        ),
+        null=False,
+        default="placed",
+    )
+    total_amount = models.DecimalField(max_digits=20, decimal_places=8, default=0)
+    filled_amount = models.DecimalField(max_digits=20, decimal_places=8, default=0)
+    price = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
+    is_partial = models.BooleanField(default=True)
+
+
+class BCTransaction(BaseModel):
+    order = models.ForeignKey(
+        BCOrder,
+        on_delete=models.CASCADE,
+        related_name="transactions",
+        null=False,
+    )
+    amount = models.DecimalField(max_digits=20, decimal_places=8)
+    transaction_type = models.CharField(
+        max_length=4,
+        choices=(
+            ("buy", "Buy"),
+            ("sell", "Sell"),
+        ),
+        null=False,
+    )
+
+
 class ClusterRegistration(BaseModel):
     token = models.CharField(
         default=generate_provisioning_token, unique=True, editable=False, max_length=50

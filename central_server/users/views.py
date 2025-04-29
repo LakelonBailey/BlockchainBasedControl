@@ -4,6 +4,7 @@ from django.http import HttpRequest, HttpResponseBadRequest, HttpResponse
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.contrib.auth import login
+from central_server.settings import AUTHENTICATION_BACKEND_MAP
 
 
 class LoginView(View):
@@ -34,7 +35,7 @@ class LoginView(View):
             }
             return render(request, "registration/login.html", context)
         else:
-            login(request, user)
+            login(request, user, backend=AUTHENTICATION_BACKEND_MAP["oauth"])
 
         if next:
             return redirect(next)
@@ -76,8 +77,6 @@ class SignupView(View):
                 user = User(
                     username=email.lower(),
                 )
-                user.is_staff = True
-                user.is_superuser = True
                 user.set_password(password)
                 user.save()
             except IntegrityError as e:

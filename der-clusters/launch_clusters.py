@@ -1,3 +1,4 @@
+import os
 import argparse
 import subprocess
 import sys
@@ -17,10 +18,13 @@ def fetch_client_credentials(
     return data["clients"]
 
 
-def build_compose_yaml(clients, central_server_origin, base_port, chain_id):
+def build_compose_yaml(clients, central_server_origin, base_port, chain_id, auth_node_enodes):
     services = {}
-
     for i, client in enumerate(clients, start=1):
+        geth_port = 30303 + i  # port the geth node is broadcasting
+        http_port = 8545 + i  # http geth console port 8545 + der cluster number
+        auth_rpc_port = 20900 + i  # just need to define to prevent port conflicts
+        ws_port = 22000 + i  # just need to define to prevent port conflicts
         name = f"der-cluster-{i}"
         services[name] = {
             "build": {"context": ".", "dockerfile": "Dockerfile"},
@@ -34,6 +38,11 @@ def build_compose_yaml(clients, central_server_origin, base_port, chain_id):
                 f"CLIENT_ID={client['client_id']}",
                 f"CLIENT_SECRET={client['client_secret']}",
                 f"CHAIN_ID={chain_id}",
+                f"G_PORT={geth_port}",
+                f"HTTP_PORT={http_port}",
+                f"AUTH_RPC_PORT={auth_rpc_port}",
+                f"WS_PORT={ws_port}",
+                f"AUTH_ENODES={auth_node_enodes}"
             ],
         }
 
@@ -64,16 +73,22 @@ def main():
         description="Launch or stop DER clusters using a registration token"
     )
     parser.add_argument("registration_token", type=str, help="Registration token")
-    parser.add_argument("--chain_id", type=int, help="chain id number for your chain")
+    parser.add_argument("--chain-id", type=int, help="chain id number for your chain")
+    
     parser.add_argument(
         "--central-server-origin",
-        default="http://localhost:8080",
+        default=os.environ.get("CENTRAL_SERVER_ORIGIN", "http://localhost:8000"),
         help="Origin URL for the central server",
+    )
+    parser.add_argument(
+      "--auth-node-enodes",
+      type=str,
+      help='Enodes of authourity nodes comma seperated, no spaces'
     )
     parser.add_argument(
         "--base-port",
         type=int,
-        default=8000,
+        default=int(os.environ.get("BASE_METER_PORT", 8001)),
         help="Base port number for cluster port mapping",
     )
     parser.add_argument(
@@ -89,6 +104,7 @@ def main():
         args.central_server_origin,
         args.base_port,
         args.chain_id,
+        args.auth_node_enodes
     )
     run_docker_compose(compose_dict, stop=args.stop)
 

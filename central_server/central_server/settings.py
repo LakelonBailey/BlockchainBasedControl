@@ -16,6 +16,8 @@ if OIDC_RSA_PRIVATE_KEY_BASE64:
     OIDC_RSA_PRIVATE_KEY = base64.b64decode(OIDC_RSA_PRIVATE_KEY_BASE64).decode("utf-8")
 
 SECRET_KEY = os.environ["SECRET_KEY"]
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_ROOT = BASE_DIR / "static"
 
 
 if ENVIRONMENT == "local":
@@ -27,8 +29,21 @@ if ENVIRONMENT == "local":
     BASE_URL = "http://localhost:8000"
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    ALLOWED_HOSTS = []
     DEBUG = False
+    BASE_URL = "https://blockchain.lakelon.dev"
+
+    ALLOWED_HOSTS = ["*"]
+
+    # only for local HTTP testing:
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+    CSRF_TRUSTED_ORIGINS = [
+        "https://blockchain.lakelon.dev",
+        "http://localhost:5173",
+    ]
+
+    CORS_ALLOW_ALL_ORIGINS = True
 
 INSTALLED_APPS = [
     "channels",
@@ -142,7 +157,7 @@ OAUTH2_PROVIDER = {
     "AUTHORIZATION_CODE_EXPIRE_SECONDS": 600,
     "OIDC_ENABLED": True,  # Enable OIDC support
     "OIDC_ISS_ENDPOINT": f"{BASE_URL}/o/",  # OIDC issuer endpoint
-    "ALLOWED_SCHEMES": ["https", "http"] if ENVIRONMENT == "local" else ["https"],
+    "ALLOWED_SCHEMES": ["https", "http"],
     "OIDC_RSA_PRIVATE_KEY": OIDC_RSA_PRIVATE_KEY,
 }
 
@@ -159,6 +174,16 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
+
+AUTHENTICATION_BACKENDS = (
+    "oauth2_provider.backends.OAuth2Backend",
+    "django.contrib.auth.backends.ModelBackend",
+)
+
+AUTHENTICATION_BACKEND_MAP = {
+    "default": "django.contrib.auth.backends.ModelBackend",
+    "oauth": "oauth2_provider.backends.OAuth2Backend",
+}
 
 
 # Static files (CSS, JavaScript, Images)

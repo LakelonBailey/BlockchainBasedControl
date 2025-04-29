@@ -12,8 +12,10 @@ from .serializers import (
     SmartMeterSerializer,
     SmartMeterAnalysisSerializer,
     SmartMeterEnodeUploadSerializer,
+    BCOrderSerializer,
+    BCTransactionSerializer,
 )
-from .models import SmartMeter, Transaction, ClusterRegistration
+from .models import SmartMeter, Transaction, ClusterRegistration, BCOrder, BCTransaction
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication, TokenHasScope
 from django.utils import timezone
 import secrets
@@ -21,6 +23,70 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.shortcuts import get_object_or_404
 from django.db import models
+from datetime import datetime, timedelta
+from pytz import UTC
+
+
+class BCOrderAPIView(APIView):
+    """
+    POST: Create a new BCOrder.
+    PUT: Update fields on an existing BCOrder (price, state, total_amount).
+    """
+
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [TokenHasScope]
+    required_scopes = ["smart_meter"]
+
+    def get(self, _):
+        orders = BCOrder.objects.all()
+        serializer = BCOrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = BCOrderSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        order_id = request.data.get("order_id")
+        try:
+            order = BCOrder.objects.get(order_id=order_id)
+        except BCOrder.DoesNotExist:
+            return Response(
+                {"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = BCOrderSerializer(order, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BCTransactionAPIView(APIView):
+    """
+    POST: Create a new BCTransaction and update the parent BCOrder's filled_amount and state.
+    """
+
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [TokenHasScope]
+    required_scopes = ["smart_meter"]
+
+    def get(self, _):
+        txs = BCTransaction.objects.all().select_related("order")
+        serializer = BCTransactionSerializer(txs, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = BCTransactionSerializer(data=request.data)
+        if serializer.is_valid():
+            tx = serializer.save()
+            return Response(
+                BCTransactionSerializer(tx).data, status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SmartMeterDetailView(APIView):
@@ -70,10 +136,11 @@ class SmartMeterEnodeApiView(APIView):
     required_scopes = ["smart_meter"]
 
     def get(self, _: Request):
+        time_lower_bound = datetime.now(UTC) - timedelta(seconds=60)
         enodes = list(
-            SmartMeter.objects.filter(enode__isnull=False).values_list(
-                "enode", flat=True
-            )
+            SmartMeter.objects.filter(
+                enode__isnull=False, last_ping_ts__gte=time_lower_bound
+            ).values_list("enode", flat=True)
         )
         return Response({"enodes": enodes}, status=status.HTTP_200_OK)
 
