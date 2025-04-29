@@ -18,7 +18,9 @@ def fetch_client_credentials(
     return data["clients"]
 
 
-def build_compose_yaml(clients, central_server_origin, base_port, chain_id, auth_node_enodes):
+def build_compose_yaml(
+    clients, central_server_origin, base_port, chain_id, auth_node_enodes
+):
     services = {}
     for i, client in enumerate(clients, start=1):
         geth_port = 30303 + i  # port the geth node is broadcasting
@@ -32,7 +34,7 @@ def build_compose_yaml(clients, central_server_origin, base_port, chain_id, auth
             "network_mode": "host",
             # "networks": ["smart_grid"],
             "environment": [
-                f"METER_ORIGIN=ws://{name}:{base_port + i}",
+                f"METER_ORIGIN=ws://localhost:{base_port + i}",
                 f"METER_PORT={base_port + i}",
                 f"CENTRAL_SERVER_ORIGIN={central_server_origin}",
                 f"CLIENT_ID={client['client_id']}",
@@ -42,7 +44,7 @@ def build_compose_yaml(clients, central_server_origin, base_port, chain_id, auth
                 f"HTTP_PORT={http_port}",
                 f"AUTH_RPC_PORT={auth_rpc_port}",
                 f"WS_PORT={ws_port}",
-                f"AUTH_ENODES={auth_node_enodes}"
+                f"AUTH_ENODES={auth_node_enodes}",
             ],
         }
 
@@ -74,16 +76,16 @@ def main():
     )
     parser.add_argument("registration_token", type=str, help="Registration token")
     parser.add_argument("--chain-id", type=int, help="chain id number for your chain")
-    
+
     parser.add_argument(
         "--central-server-origin",
         default=os.environ.get("CENTRAL_SERVER_ORIGIN", "http://localhost:8000"),
         help="Origin URL for the central server",
     )
     parser.add_argument(
-      "--auth-node-enodes",
-      type=str,
-      help='Enodes of authourity nodes comma seperated, no spaces'
+        "--auth-node-enodes",
+        type=str,
+        help="Enodes of authourity nodes comma seperated, no spaces",
     )
     parser.add_argument(
         "--base-port",
@@ -104,7 +106,7 @@ def main():
         args.central_server_origin,
         args.base_port,
         args.chain_id,
-        args.auth_node_enodes
+        args.auth_node_enodes,
     )
     run_docker_compose(compose_dict, stop=args.stop)
 
