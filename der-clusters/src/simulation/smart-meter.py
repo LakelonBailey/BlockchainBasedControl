@@ -234,7 +234,7 @@ def send_transaction(function, value=0):
             "nonce": w3.eth.get_transaction_count(account.address),
             "gas": 2000000,  # Adjust based on contract complexity
             "gasPrice": w3.to_wei("1", "gwei"),
-            "chainId": 1340,  # Your PoA network ID
+            "chainId": CHAIN_ID,  # Your PoA network ID
             "value": value,
         }
     )
@@ -369,9 +369,15 @@ def listen_for_events(event_name, filters):
 def spin_event_threads():
     # TODO: Initialize all Web3 client info, find account, etc.
     global private_key, account, orderbook_contract, w3
-    ACCOUNT = os.environ["ACCOUNT"]  # account address generated when creating geth account
-    KEYSTORE_FILE = os.environ["KEYSTORE_FILE"]  # Path to keystore file generated when creating geth account
-    KEYSTORE_PASSWORD = os.environ["KEYSTORE_PASSWORD"]  # /password.txt after geth setup
+    with open("/app/auto-geth-setup/geth_node/address.txt", "r") as account_file:
+      ACCOUNT = account_file.read()  # account address generated when creating geth account
+    with open("/app/auto-geth-setup/geth_node/key.txt", "r") as key_file:
+      KEYSTORE_PATH = key_file.read()  # Path to keystore file generated when creating geth account
+    KEYSTORE_FILE = "/app/auto-geth-setup/geth_node/" + str(KEYSTORE_PATH)
+    with open("/app/auto-geth-setup/geth_node/password.txt", "r") as password:
+      KEYSTORE_PASSWORD = password.read()  # /password.txt after geth setup
+    logger.info(f"")  
+      
     w3 = Web3(
         Web3.HTTPProvider(WEB3_PROVIDER)
     )       # Initialized as None at first. Will be changed AFTER geth account setup
@@ -387,7 +393,7 @@ def spin_event_threads():
 
     with open(KEYSTORE_FILE) as f:
         keystore_json = json.load(f)
-    with open(CONTRACT_ABI_PATH) as f:
+    with open("/app/auto-geth-setup/orderbookABI.json") as f:
         contract_abi = json.load(f)
 
     private_key = w3.eth.account.decrypt(keystore_json, KEYSTORE_PASSWORD)
@@ -464,7 +470,7 @@ def determine_trades():
         try:
             # scale val
             send_transaction(
-                orderbook_contract.funcitons.placeOrder(  # TODO descale by 100 for transaction notifications
+                orderbook_contract.functions.placeOrder(  # TODO descale by 100 for transaction notifications
                     int(
                         sell_am * 100
                     ),  # quantity (scale by 100 because solidity does not have a decimal type)
@@ -496,7 +502,7 @@ def determine_trades():
         try:
             # scale val
             send_transaction(
-                orderbook_contract.funcitons.placeOrder(
+                orderbook_contract.functions.placeOrder(
                     int(
                         buy_am * 100
                     ),  # quantity (scale by 100 because solidity does not have a decimal type)
