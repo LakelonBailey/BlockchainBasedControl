@@ -1,347 +1,5 @@
 [
 	{
-		"constant": true,
-		"inputs": [],
-		"name": "getSellOrders",
-		"outputs": [
-			{
-				"components": [
-					{
-						"name": "user",
-						"type": "address"
-					},
-					{
-						"name": "energyAmount",
-						"type": "uint256"
-					},
-					{
-						"name": "pricePerUnit",
-						"type": "uint256"
-					},
-					{
-						"name": "isBuy",
-						"type": "bool"
-					},
-					{
-						"name": "isMarket",
-						"type": "bool"
-					},
-					{
-						"name": "orderId",
-						"type": "bytes32"
-					}
-				],
-				"name": "",
-				"type": "tuple[]"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "getBestBid",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "lastTradedPrice",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "balances",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "buyOrders",
-		"outputs": [
-			{
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"name": "energyAmount",
-				"type": "uint256"
-			},
-			{
-				"name": "pricePerUnit",
-				"type": "uint256"
-			},
-			{
-				"name": "isBuy",
-				"type": "bool"
-			},
-			{
-				"name": "isMarket",
-				"type": "bool"
-			},
-			{
-				"name": "orderId",
-				"type": "bytes32"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "sellOrders",
-		"outputs": [
-			{
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"name": "energyAmount",
-				"type": "uint256"
-			},
-			{
-				"name": "pricePerUnit",
-				"type": "uint256"
-			},
-			{
-				"name": "isBuy",
-				"type": "bool"
-			},
-			{
-				"name": "isMarket",
-				"type": "bool"
-			},
-			{
-				"name": "orderId",
-				"type": "bytes32"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"name": "sellOrderIndex",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "energyAmount",
-				"type": "uint256"
-			},
-			{
-				"name": "pricePerUnit",
-				"type": "uint256"
-			},
-			{
-				"name": "isBuy",
-				"type": "bool"
-			},
-			{
-				"name": "isMarket",
-				"type": "bool"
-			}
-		],
-		"name": "placeOrder",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "getBestAsk",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "getPrice",
-		"outputs": [
-			{
-				"name": "bestBid",
-				"type": "uint256"
-			},
-			{
-				"name": "bestAsk",
-				"type": "uint256"
-			},
-			{
-				"name": "lastPrice",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "orderId",
-				"type": "bytes32"
-			},
-			{
-				"name": "isBuy",
-				"type": "bool"
-			}
-		],
-		"name": "cancelOrder",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [],
-		"name": "getBuyOrders",
-		"outputs": [
-			{
-				"components": [
-					{
-						"name": "user",
-						"type": "address"
-					},
-					{
-						"name": "energyAmount",
-						"type": "uint256"
-					},
-					{
-						"name": "pricePerUnit",
-						"type": "uint256"
-					},
-					{
-						"name": "isBuy",
-						"type": "bool"
-					},
-					{
-						"name": "isMarket",
-						"type": "bool"
-					},
-					{
-						"name": "orderId",
-						"type": "bytes32"
-					}
-				],
-				"name": "",
-				"type": "tuple[]"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getBalance",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"name": "buyOrderIndex",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
@@ -352,58 +10,25 @@
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "address",
 				"name": "user",
 				"type": "address"
 			},
 			{
 				"indexed": false,
+				"internalType": "bool",
 				"name": "isBuy",
 				"type": "bool"
 			},
 			{
 				"indexed": false,
-				"name": "amount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "pricePerUnit",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"name": "orderId",
-				"type": "bytes32"
-			},
-			{
-				"indexed": false,
-				"name": "market",
-				"type": "bool"
-			}
-		],
-		"name": "OrderPlaced",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"name": "isBuy",
-				"type": "bool"
-			},
-			{
-				"indexed": false,
+				"internalType": "uint256",
 				"name": "index",
 				"type": "uint256"
 			},
 			{
 				"indexed": false,
+				"internalType": "bytes32",
 				"name": "oid",
 				"type": "bytes32"
 			}
@@ -416,41 +41,481 @@
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "address",
 				"name": "buyer",
 				"type": "address"
 			},
 			{
 				"indexed": false,
+				"internalType": "bytes32",
 				"name": "buyerOrderId",
 				"type": "bytes32"
 			},
 			{
 				"indexed": true,
+				"internalType": "address",
 				"name": "seller",
 				"type": "address"
 			},
 			{
 				"indexed": false,
+				"internalType": "bytes32",
 				"name": "sellerOrderId",
 				"type": "bytes32"
 			},
 			{
 				"indexed": false,
+				"internalType": "uint256",
 				"name": "energyAmount",
 				"type": "uint256"
 			},
 			{
 				"indexed": false,
+				"internalType": "uint256",
 				"name": "pricePerUnit",
 				"type": "uint256"
 			},
 			{
 				"indexed": false,
+				"internalType": "uint256",
 				"name": "cost",
 				"type": "uint256"
 			}
 		],
 		"name": "OrderMatched",
 		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "isBuy",
+				"type": "bool"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "pricePerUnit",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bytes32",
+				"name": "orderId",
+				"type": "bytes32"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "market",
+				"type": "bool"
+			}
+		],
+		"name": "OrderPlaced",
+		"type": "event"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "balances",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "buyOrderIndex",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "buyOrders",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "energyAmount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "pricePerUnit",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "isBuy",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "isMarket",
+				"type": "bool"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "orderId",
+				"type": "bytes32"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "orderId",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "bool",
+				"name": "isBuy",
+				"type": "bool"
+			}
+		],
+		"name": "cancelOrder",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getBalance",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getBestAsk",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getBestBid",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getBuyOrders",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "energyAmount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "pricePerUnit",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isBuy",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "isMarket",
+						"type": "bool"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "orderId",
+						"type": "bytes32"
+					}
+				],
+				"internalType": "struct EnergyOrderBookNativeCurrency.Order[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getPrice",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "bestBid",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "bestAsk",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "lastPrice",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getSellOrders",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "energyAmount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "pricePerUnit",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isBuy",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "isMarket",
+						"type": "bool"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "orderId",
+						"type": "bytes32"
+					}
+				],
+				"internalType": "struct EnergyOrderBookNativeCurrency.Order[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "lastTradedPrice",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "energyAmount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "pricePerUnit",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "isBuy",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "isMarket",
+				"type": "bool"
+			}
+		],
+		"name": "placeOrder",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "sellOrderIndex",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "sellOrders",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "energyAmount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "pricePerUnit",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "isBuy",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "isMarket",
+				"type": "bool"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "orderId",
+				"type": "bytes32"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
 	}
 ]
