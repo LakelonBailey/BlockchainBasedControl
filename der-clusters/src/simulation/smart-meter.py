@@ -475,9 +475,9 @@ def update_battery_sync(device_type, energy_kwh):
         if device_type == 'consumption':
             if battery >= energy_kwh:
                 battery = battery - energy_kwh
-        else:
-            energy_bought_from_grid_kWh = energy_bought_from_grid_kWh + (battery - energy_kwh)
-            battery = 0
+            else:
+                energy_bought_from_grid_kWh = energy_bought_from_grid_kWh + (battery - energy_kwh)
+                battery = 0
 
         determine_trades()
 
