@@ -138,7 +138,7 @@ def main():
             raise ValueError(
                 "Missing chain id! Pass as argument or declare as CHAIN_ID env var."
             )
-        if args.auth_enodes is None:
+        if args.auth_node_enodes is None:
             raise ValueError(
                 "Missing auth enodes! Pass as argument or declare as AUTH_ENODES env var."
             )
