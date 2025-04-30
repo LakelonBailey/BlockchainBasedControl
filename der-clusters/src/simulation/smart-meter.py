@@ -127,7 +127,7 @@ async def make_enode_json():
     with open(own_enode_file, "r") as file:
         own_enode = file.read()
     logger.info(f"------------>{own_enode}")
-    own = await upload_enode(own_enode)
+    await upload_enode(own_enode)
 
     await asyncio.sleep(10)
 
@@ -141,7 +141,7 @@ async def make_enode_json():
     auth_enodes = AUTH_ENODES.split(",")
     for auth in auth_enodes:
         enodes.append(auth)
-    config = {"Node.P2P": {"StaticNodes": enodes}}
+
     # the config file will go in the data folder of the geth node, this dir is for the current docker setup
     config_file = os.path.join("/app/auto-geth-setup/geth_node/data", "config.toml")
     with open(config_file, "w") as file:
@@ -163,7 +163,6 @@ async def geth_setup_async(port1, is_auth="n"):
     async for line in account.stdout:
         print(line.decode(), end="")
     await account.wait()
-    port = G_PORT
 
     init = await asyncio.create_subprocess_exec(
         "python3",
@@ -271,6 +270,7 @@ def printUserOrders():
 
 
 def updateOrder(buyerOId, sellerOId, quantity, exec_price):
+    global battery
     with battery_lock:
         if buyerOId in orders:
             battery = min(battery + quantity, BATTERY_CAPACITY)
