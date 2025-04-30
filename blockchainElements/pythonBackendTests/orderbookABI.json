@@ -42,7 +42,40 @@
 	{
 		"constant": true,
 		"inputs": [],
+		"name": "getBestBid",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
 		"name": "lastTradedPrice",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "balances",
 		"outputs": [
 			{
 				"name": "",
@@ -179,6 +212,20 @@
 	{
 		"constant": true,
 		"inputs": [],
+		"name": "getBestAsk",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
 		"name": "getPrice",
 		"outputs": [
 			{
@@ -258,12 +305,17 @@
 	},
 	{
 		"constant": true,
-		"inputs": [],
-		"name": "token",
+		"inputs": [
+			{
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getBalance",
 		"outputs": [
 			{
 				"name": "",
-				"type": "address"
+				"type": "uint256"
 			}
 		],
 		"payable": false,
@@ -290,12 +342,7 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"name": "tokenAddress",
-				"type": "address"
-			}
-		],
+		"inputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
 		"type": "constructor"
@@ -327,6 +374,11 @@
 				"indexed": false,
 				"name": "orderId",
 				"type": "bytes32"
+			},
+			{
+				"indexed": false,
+				"name": "market",
+				"type": "bool"
 			}
 		],
 		"name": "OrderPlaced",
@@ -349,6 +401,11 @@
 				"indexed": false,
 				"name": "index",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "oid",
+				"type": "bytes32"
 			}
 		],
 		"name": "OrderCancelled",
