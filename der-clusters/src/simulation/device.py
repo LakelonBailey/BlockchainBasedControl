@@ -25,14 +25,15 @@ async def send_energy_data(device_name: str, meter_origin: str):
             while True:
                 current_time = datetime.now(pytz.UTC)
                 energy_kwh = device.calculate_kwh(start_time, current_time)
-                message = {
-                    "timestamp": current_time.isoformat(),
-                    "energy_kwh": energy_kwh,
-                    "device": device.to_dict(),
-                }
-                start_time = current_time
+                if energy_kwh > 0:
+                    message = {
+                        "timestamp": current_time.isoformat(),
+                        "energy_kwh": energy_kwh,
+                        "device": device.to_dict(),
+                    }
+                    start_time = current_time
 
-                await websocket.send(json.dumps(message))
+                    await websocket.send(json.dumps(message))
 
                 await asyncio.sleep(random.randint(1, 10))
     except Exception as e:

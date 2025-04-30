@@ -16,21 +16,38 @@ if OIDC_RSA_PRIVATE_KEY_BASE64:
     OIDC_RSA_PRIVATE_KEY = base64.b64decode(OIDC_RSA_PRIVATE_KEY_BASE64).decode("utf-8")
 
 SECRET_KEY = os.environ["SECRET_KEY"]
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_ROOT = BASE_DIR / "static"
 
 
 if ENVIRONMENT == "local":
     ALLOWED_HOSTS = ["*"]
-    ALLOWED_ORIGINS = ["http://localhost:5173", "http://localhost:8080"]
+    ALLOWED_ORIGINS = ["http://localhost:5173", "http://localhost:8000"]
     CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
     DEBUG = True
     TEMPLATE_PATH = "templates/"
-    BASE_URL = "http://localhost:8080"
+    BASE_URL = "http://localhost:8000"
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    ALLOWED_HOSTS = []
     DEBUG = False
+    BASE_URL = "https://blockchain.lakelon.dev"
+
+    ALLOWED_HOSTS = ["*"]
+
+    # only for local HTTP testing:
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+    CSRF_TRUSTED_ORIGINS = [
+        "https://blockchain.lakelon.dev",
+        "http://localhost:5173",
+    ]
+
+    CORS_ALLOW_ALL_ORIGINS = True
 
 INSTALLED_APPS = [
+    "channels",
+    "daphne",
     "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -43,6 +60,7 @@ INSTALLED_APPS = [
     "api",
     "central_server",
 ]
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -79,7 +97,14 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "central_server.wsgi.application"
+ASGI_APPLICATION = "central_server.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
+
 
 DATABASES = {
     "default": {
@@ -92,11 +117,18 @@ DATABASES = {
     }
 }
 
+AUTHENTICATION_BACKENDS = (
+    "oauth2_provider.backends.OAuth2Backend",
+    "django.contrib.auth.backends.ModelBackend",
+)
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.\
-UserAttributeSimilarityValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation.\
+UserAttributeSimilarityValidator"
+        ),
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
@@ -119,13 +151,13 @@ REST_FRAMEWORK = {
 OAUTH2_PROVIDER_APPLICATION_MODEL = "oauth2_provider.Application"
 OAUTH2_PROVIDER = {
     "SCOPES": {
-        "transactions:upload": "Allows uploading of transactions",
+        "smart_meter": "Allows uploading of transactions",
         "openid": "OpenID",
     },
     "AUTHORIZATION_CODE_EXPIRE_SECONDS": 600,
     "OIDC_ENABLED": True,  # Enable OIDC support
     "OIDC_ISS_ENDPOINT": f"{BASE_URL}/o/",  # OIDC issuer endpoint
-    "ALLOWED_SCHEMES": ["https", "http"] if ENVIRONMENT == "local" else ["https"],
+    "ALLOWED_SCHEMES": ["https", "http"],
     "OIDC_RSA_PRIVATE_KEY": OIDC_RSA_PRIVATE_KEY,
 }
 
@@ -142,6 +174,16 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
+
+AUTHENTICATION_BACKENDS = (
+    "oauth2_provider.backends.OAuth2Backend",
+    "django.contrib.auth.backends.ModelBackend",
+)
+
+AUTHENTICATION_BACKEND_MAP = {
+    "default": "django.contrib.auth.backends.ModelBackend",
+    "oauth": "oauth2_provider.backends.OAuth2Backend",
+}
 
 
 # Static files (CSS, JavaScript, Images)

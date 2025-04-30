@@ -1,22 +1,103 @@
-import uuid
-import secrets
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework import status
 from rest_framework import generics, permissions
 from rest_framework.pagination import PageNumberPagination
 from oauth2_provider.models import Application
 from .serializers import (
-    SmartMeterRegistrationSerializer,
     BatchTransactionUploadSerializer,
     TransactionSerializer,
+    SmartMeterCredentialSerializer,
+    SmartMeterSerializer,
+    SmartMeterAnalysisSerializer,
+    SmartMeterEnodeUploadSerializer,
+    BCOrderSerializer,
+    BCTransactionSerializer,
 )
-from .models import SmartMeter, Transaction
+from .models import SmartMeter, Transaction, ClusterRegistration, BCOrder, BCTransaction
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication, TokenHasScope
+from django.utils import timezone
+import secrets
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from django.shortcuts import get_object_or_404
+from django.db import models
+from datetime import datetime, timedelta
+from pytz import UTC
+
+
+class BCOrderAPIView(APIView):
+    """
+    POST: Create a new BCOrder.
+    PUT: Update fields on an existing BCOrder (price, state, total_amount).
+    """
+
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [TokenHasScope]
+    required_scopes = ["smart_meter"]
+
+    def get(self, _):
+        orders = BCOrder.objects.all()
+        serializer = BCOrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = BCOrderSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        order_id = request.data.get("order_id")
+        try:
+            order = BCOrder.objects.get(order_id=order_id)
+        except BCOrder.DoesNotExist:
+            return Response(
+                {"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = BCOrderSerializer(order, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BCTransactionAPIView(APIView):
+    """
+    POST: Create a new BCTransaction and update the parent BCOrder's filled_amount and state.
+    """
+
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [TokenHasScope]
+    required_scopes = ["smart_meter"]
+
+    def get(self, _):
+        txs = BCTransaction.objects.all().select_related("order")
+        serializer = BCTransactionSerializer(txs, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = BCTransactionSerializer(data=request.data)
+        if serializer.is_valid():
+            tx = serializer.save()
+            return Response(
+                BCTransactionSerializer(tx).data, status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SmartMeterDetailView(APIView):
+    def get(self, request, smart_meter_id):
+        smart_meter = get_object_or_404(SmartMeter, pk=smart_meter_id)
+        serializer = SmartMeterAnalysisSerializer(smart_meter)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # Custom pagination class using 'page' and 'limit' query parameters
-class TransactionPagination(PageNumberPagination):
+class GeneralPagination(PageNumberPagination):
     page_size = 10  # default items per page
     page_query_param = "page"  # for the current page number (default)
     page_size_query_param = "limit"  # allows client to set page size using "limit"
@@ -26,7 +107,7 @@ class TransactionPagination(PageNumberPagination):
 class TransactionListAPIView(generics.ListAPIView):
     queryset = Transaction.objects.all().order_by("-timestamp")
     serializer_class = TransactionSerializer
-    pagination_class = TransactionPagination
+    pagination_class = GeneralPagination
 
     # Require OAuth2 authentication with the 'openid' scope.
     authentication_classes = [OAuth2Authentication]
@@ -34,18 +115,101 @@ class TransactionListAPIView(generics.ListAPIView):
     required_scopes = ["openid"]
 
 
+class SmartMeterListAPIView(generics.ListAPIView):
+    queryset = (
+        SmartMeter.objects.all()
+        .order_by("-last_ping_ts")
+        .annotate(total_transactions=models.Count("transactions", distinct=True))
+    )
+    serializer_class = SmartMeterSerializer
+    pagination_class = GeneralPagination
+
+    # Require OAuth2 authentication with the 'openid' scope.
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [permissions.IsAuthenticated, TokenHasScope]
+    required_scopes = ["openid"]
+
+
+class SmartMeterEnodeApiView(APIView):
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [TokenHasScope]
+    required_scopes = ["smart_meter"]
+
+    def get(self, _: Request):
+        time_lower_bound = datetime.now(UTC) - timedelta(seconds=60)
+        enodes = list(
+            SmartMeter.objects.filter(
+                enode__isnull=False, last_ping_ts__gte=time_lower_bound
+            ).values_list("enode", flat=True)
+        )
+        return Response({"enodes": enodes}, status=status.HTTP_200_OK)
+
+    def post(self, request: Request):
+        serializer = SmartMeterEnodeUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            smart_meter, _ = SmartMeter.objects.get_or_create(
+                application=request.auth.application
+            )
+            smart_meter.enode = serializer.validated_data.get("enode")
+            smart_meter.save(update_fields=["enode"])
+
+            return Response(
+                {"message": "Enode uploaded successfully."},
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SmartMeterPingView(APIView):
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [TokenHasScope]
+    required_scopes = ["smart_meter"]
+
+    def post(self, request):
+        current_time = timezone.now()
+        smart_meter = SmartMeter.objects.filter(
+            application=request.auth.application
+        ).first()
+
+        if smart_meter:
+            smart_meter.last_ping_ts = current_time
+            smart_meter.save(update_fields=["last_ping_ts"])
+
+            # Send a message to the "meter_status" group.
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                "meter_status",
+                {
+                    "type": "meter_status",
+                    "data": {
+                        "timestamp": current_time.isoformat(),
+                        "smart_meter_id": str(smart_meter.uuid),
+                        "last_ping_ts": smart_meter.last_ping_ts.isoformat(),
+                        "total_transactions": (
+                            Transaction.objects.filter(smart_meter=smart_meter).count()
+                        ),
+                    },
+                },
+            )
+
+        return Response(status=status.HTTP_200_OK)
+
+
 class BatchTransactionUploadView(APIView):
     authentication_classes = [OAuth2Authentication]
     permission_classes = [TokenHasScope]
-    required_scopes = ["transactions:upload"]
+    required_scopes = ["smart_meter"]
 
-    def post(self, request, format=None):
+    def post(self, request: Request):
         serializer = BatchTransactionUploadSerializer(data=request.data)
         smart_meter = SmartMeter.objects.get(application=request.auth.application)
         if serializer.is_valid():
             transactions = serializer.validated_data.get("transactions", [])
             transaction_objects = [
-                Transaction(**transaction, smart_meter=smart_meter)
+                Transaction(
+                    **transaction,
+                    smart_meter=smart_meter,
+                )
                 for transaction in transactions
             ]
             Transaction.objects.bulk_create(transaction_objects)
@@ -58,67 +222,68 @@ class BatchTransactionUploadView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SmartMeterRegistrationView(APIView):
-    # Allow unauthenticated requests for registration.
+class ClusterRegistrationView(APIView):
     authentication_classes = []
     permission_classes = []
 
-    def post(self, request, format=None):
-        serializer = SmartMeterRegistrationSerializer(data=request.data, context={})
-        if serializer.is_valid():
-            device_id = serializer.validated_data["device_id"]
-            public_key = serializer.validated_data["public_key"]
+    def post(self, request):
+        token = request.data.get("registration_token")
+        if not token:
+            return Response(
+                {"error": "registration_token required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-            # Check if the device is already registered.
-            try:
-                meter = SmartMeter.objects.get(device_id=device_id)
+        try:
+            registration = ClusterRegistration.objects.get(token=token)
+        except ClusterRegistration.DoesNotExist:
+            return Response(
+                {"error": "Invalid registration token"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-                # Return the stored credentials (client_id from the Application and
-                # plain_client_secret).
-                return Response(
-                    {
-                        "client_id": meter.application.client_id,
-                        "client_secret": meter.plain_client_secret,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-            except SmartMeter.DoesNotExist:
+        smart_meters = registration.smart_meters.all()
 
-                # The device is not registered yet.
-                # Generate a plain text secret using the secrets module.
-                client_id = uuid.uuid4().hex
-                plain_client_secret = secrets.token_urlsafe(32)
+        # If smart meters already exist, return them
+        if smart_meters.exists():
+            registration.used_count += 1
+            registration.last_used = timezone.now()
+            registration.save(update_fields=["used_count", "last_used"])
+            serializer = SmartMeterCredentialSerializer(smart_meters, many=True)
+            return Response(
+                {
+                    "registration": str(registration.token),
+                    "count": smart_meters.count(),
+                    "clients": serializer.data,
+                }
+            )
 
-                # Create a new OAuth2 Application using Client Credentials grant type.
-                app = Application.objects.create(
-                    name=f"SmartMeter-{device_id}",
-                    client_id=client_id,
-                    client_secret=plain_client_secret,
-                    user=None,
-                    client_type=Application.CLIENT_CONFIDENTIAL,
-                    authorization_grant_type=Application.GRANT_CLIENT_CREDENTIALS,
-                )
+        # Otherwise, create new applications and SmartMeters
+        new_smart_meters = []
+        for _ in range(registration.quantity):
+            raw_client_secret = secrets.token_urlsafe(32)
+            app = Application.objects.create(
+                name=f"SmartMeter - {registration.uuid}",
+                client_type=Application.CLIENT_CONFIDENTIAL,
+                client_secret=raw_client_secret,
+                authorization_grant_type=Application.GRANT_CLIENT_CREDENTIALS,
+            )
+            sm = SmartMeter.objects.create(
+                registration=registration,
+                application=app,
+                raw_client_secret=raw_client_secret,
+            )
+            new_smart_meters.append(sm)
 
-                # Mark the provisioning token as used.
-                token_obj = serializer.context.get("token_obj")
-                if token_obj:
-                    token_obj.is_used = True
-                    token_obj.device_id = device_id
-                    token_obj.save()
+        registration.used_count = 1
+        registration.last_used = timezone.now()
+        registration.save(update_fields=["used_count", "last_used"])
 
-                # Create a SmartMeter record and store the plain text client secret.
-                SmartMeter.objects.create(
-                    device_id=device_id,
-                    public_key=public_key,
-                    application=app,
-                    plain_client_secret=plain_client_secret,
-                )
-
-                return Response(
-                    {
-                        "client_id": client_id,
-                        "client_secret": plain_client_secret,
-                    },
-                    status=status.HTTP_201_CREATED,
-                )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = SmartMeterCredentialSerializer(new_smart_meters, many=True)
+        return Response(
+            {
+                "registration": str(registration.token),
+                "count": len(new_smart_meters),
+                "clients": serializer.data,
+            }
+        )

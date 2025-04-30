@@ -1,20 +1,16 @@
-
 import os
 import json
 import logging
 import asyncio
+import requests
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from src.utils.server import CentralServerAPI
 from web3 import Web3
 import threading
 from time import sleep
 from threading import Lock
-import asyncio
 import random
 from collections import deque
-import subprocess
-import requests
-
 
 CLIENT_ID = os.environ["CLIENT_ID"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
@@ -28,35 +24,38 @@ AUTH_RPC_PORT = os.environ["AUTH_RPC_PORT"]
 # Interval in seconds by which the meter will ping the central server
 PING_INTERVAL = 10
 
-# Constant: number of transactions to buffer before a batch upload.
-TRANSACTION_BUFFER_SIZE = 4
-
-# How many KwH the battery can hold 
-BATTERY_CAPACITY = 13.5     
+# How many KwH the battery can hold
+BATTERY_CAPACITY = 13.5
 # moving average window to track battery
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
 # the moving average of net energy production
 energy_moving_average = 0
 
-battery = 0 # units are kWh
+battery = 0  # units are kWh
 battery_lock = Lock()
 energy_bought_from_grid_kWh = 0
 
-ACCOUNT = os.environ["ACCOUNT"]                 #account address generated when creating geth account
-KEYSTORE_FILE = os.environ["KEYSTORE_FILE"]     #Path to keystore file generated when creating geth acctoun
+ACCOUNT = os.environ["ACCOUNT"]  # account address generated when creating geth account
+KEYSTORE_FILE = os.environ[
+    "KEYSTORE_FILE"
+]  # Path to keystore file generated when creating geth acctoun
 CONTRACT_ABI_PATH = os.environ["CONTRACT_ABI_PATH"]
 KEYSTORE_PASSWORD = os.environ["KEYSTORE_PASSWORD"]
 WEB3_PROVIDER = os.environ["WEB3_PROVIDER"]
 CONTRACT_ADDRESS = os.environ["CONTRACT_ADDRESS"]
+AUTH_ENODES = os.environ["AUTH_ENODES"]
 w3 = Web3(Web3.HTTPProvider(WEB3_PROVIDER))
 CONTRACT_ADDRESS = w3.to_checksum_address(CONTRACT_ADDRESS)
+DISABLE_BLOCKCHAIN = os.environ.get("DISABLE_BLOCKCHAIN", "false").lower() == "true"
 
 if w3.is_connected():
     print("Connected to node!")
     print(f"Chain ID: {w3.eth.chain_id}")
     print(f"Block Number: {w3.eth.block_number}")
 else:
-    print("Failed to connect to node. Check if geth is running with --http on port 8545.")
+    print(
+        "Failed to connect to node. Check if geth is running with --http on port 8545."
+    )
 
 with open(KEYSTORE_FILE) as f:
     keystore_json = json.load(f)
@@ -79,13 +78,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 connected_devices = set()
 global_server_api = CentralServerAPI(CLIENT_ID, CLIENT_SECRET, scope="smart_meter")
 
 
 # store user orders
-orders      : dict[str, dict] = {} 
+orders: dict[str, dict] = {}
 orders_lock = Lock()
 
 
@@ -125,15 +123,24 @@ async def make_enode_json():
       "enode://2df673c2cfa6a9696dda8cf2878373500ccfac39910f3869d2e61efdf5d51bab8b7a4310caee522db65d578ae0cfc64b87d3cd7470844ee2ae58fa645ac1c817@134.209.41.49:30301?discport=30310"
     ]
     """
+    own_enode_file = "/app/auto-geth-setup/geth_node/enode.txt"
+    with open(own_enode_file, "r") as file:
+        own_enode = file.read()
+    logger.info(f"------------>{own_enode}")
+    own = await upload_enode(own_enode)
+
+    await asyncio.sleep(10)
 
     enodes = await get_enodes()
     logger.info(enodes)
-
     enode_file = os.path.join("/app/auto-geth-setup/geth_node", "enodes.json")
     with open(enode_file, "w") as file:
         json.dump(enodes, file)
     with open(enode_file, "r") as file:
         enodes = json.load(file)
+    auth_enodes = AUTH_ENODES.split(",")
+    for auth in auth_enodes:
+        enodes.append(auth)
     config = {"Node.P2P": {"StaticNodes": enodes}}
     # the config file will go in the data folder of the geth node, this dir is for the current docker setup
     config_file = os.path.join("/app/auto-geth-setup/geth_node/data", "config.toml")
@@ -143,12 +150,6 @@ async def make_enode_json():
         for enode in enodes:
             file.write(f'  "{enode}",\n')
         file.write("]\n")
-
-    own_enode_file = "/app/auto-geth-setup/geth_node/enode.txt"
-    with open(own_enode_file, "r") as file:
-        own_enode = file.read()
-    logger.info(f"------------>{own_enode}")
-    own = await upload_enode(own_enode)
 
 
 async def geth_setup_async(port1, is_auth="n"):
@@ -188,27 +189,24 @@ async def geth_setup_async(port1, is_auth="n"):
         print(line.decode(), end="")
     await config.wait()
 
-    proc = subprocess.Popen(
-        [
-            "python3",
-            "-u",
-            "/app/auto-geth-setup/run_node.py",
-            f"{G_PORT}",
-            f"{HTTP_PORT}",
-            f"{WS_PORT}",
-            f"{AUTH_RPC_PORT}",
-            f"{CHAIN_ID}",
-            f"{is_auth}",
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
+    proc = await asyncio.create_subprocess_exec(
+        "python3",
+        "-u",
+        "/app/auto-geth-setup/run_node.py",
+        f"{G_PORT}",
+        f"{HTTP_PORT}",
+        f"{WS_PORT}",
+        f"{AUTH_RPC_PORT}",
+        f"{CHAIN_ID}",
+        f"{is_auth}",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
     )
-    for line in proc.stdout:
+    async for line in proc.stdout:
         logger.info(f"[GETH]: {line.strip()}")
+    await proc.wait()
 
-    exit_code = proc.wait()
-    logger.error(f"[GETH exited with code {exit_code}]")
+    logger.error(f"[GETH exited with code {proc.returncode}]")
 
     while True:
         await asyncio.sleep(10)
@@ -228,7 +226,8 @@ async def ping_loop():
     """
     Periodically pings the central server in an infinite loop.
     """
-    asyncio.create_task(geth_setup_async(8900))
+    if not DISABLE_BLOCKCHAIN:
+        asyncio.create_task(geth_setup_async(8900))
     while True:
         try:
             await global_server_api.ping()
@@ -241,22 +240,24 @@ async def ping_loop():
         await asyncio.sleep(10)
 
 
-
 def send_transaction(function, value=0):
-    tx = function.build_transaction({
-        'from': account.address,
-        'nonce': w3.eth.get_transaction_count(account.address),
-        'gas': 2000000,  # Adjust based on contract complexity
-        'gasPrice': w3.to_wei('1', 'gwei'),
-        'chainId': 1340,  # Your PoA network ID
-        'value': value
-    })
+    tx = function.build_transaction(
+        {
+            "from": account.address,
+            "nonce": w3.eth.get_transaction_count(account.address),
+            "gas": 2000000,  # Adjust based on contract complexity
+            "gasPrice": w3.to_wei("1", "gwei"),
+            "chainId": 1340,  # Your PoA network ID
+            "value": value,
+        }
+    )
     signed_tx = account.sign_transaction(tx)
     tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
     print(f"Transaction sent: {tx_hash.hex()}")
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     print(f"Confirmed in block {receipt.blockNumber}")
     return receipt
+
 
 def printUserOrders():
     if not orders:
@@ -266,7 +267,8 @@ def printUserOrders():
         # Build “key=value” parts for the inner dictionary
         inner = ", ".join(f"{k}={v}" for k, v in data.items())
         print(f"{oid}: {inner}")
-    print()  
+    print()
+
 
 def updateOrder(buyerOId, sellerOId, quantity, exec_price):
     with battery_lock:
@@ -277,11 +279,12 @@ def updateOrder(buyerOId, sellerOId, quantity, exec_price):
 
     with orders_lock:
         oid = buyerOId if buyerOId in orders else sellerOId
-        if oid not in orders: return False 
-        o['executed_price'] = exec_price
+        if oid not in orders:
+            return False
+        o["executed_price"] = exec_price
         o = orders.get(oid)
-        o['curr_qty'] -= quantity
-        if o['curr_qty'] <= 0:
+        o["curr_qty"] -= quantity
+        if o["curr_qty"] <= 0:
             orders.pop(oid, None)
 
 
@@ -289,12 +292,13 @@ def addOrder(orderId, isBuy, amount, pricePerUnit, isMarket):
     if not isMarket:
         with orders_lock:
             orders[orderId] = dict(
-                side   = "buy" if isBuy else "sell",
-                origin_qty    = amount,                     # the original quantity that the user wants to buy/sell - does not change
-                user_price  = pricePerUnit,                 # the price that the user submits the buy/sell order at
-                executed_price = -1,                        # the price that the most recently updated transaction executes at -> this value gets updated
-                curr_qty = amount                           # how much quantity is still outstanding -> this value gets updated
+                side="buy" if isBuy else "sell",
+                origin_qty=amount,  # the original quantity that the user wants to buy/sell - does not change
+                user_price=pricePerUnit,  # the price that the user submits the buy/sell order at
+                executed_price=-1,  # the price that the most recently updated transaction executes at -> this value gets updated
+                curr_qty=amount,  # how much quantity is still outstanding -> this value gets updated
             )
+
 
 def removeOrder(orderId):
     with orders_lock:
@@ -306,63 +310,66 @@ def handle_event(event):
     print(f"\nNew Event: {event['event']}")
     print(f"Tx: {event['transactionHash'].hex()}, Block: {event['blockNumber']}")
 
-    for key, value in event['args'].items():
+    for key, value in event["args"].items():
         if isinstance(value, bytes):
             value = value.hex()
         print(f"  {key}: {value}")
 
+    if event["event"] == "OrderMatched":
+        oid = Web3.to_hex(event["args"]["buyerOrderId"])
+        energy_am = event["args"]["energyAmount"] / 100
+        exec_price = event["args"]["pricePerUnit"]
+        updateOrder(oid, event["args"]["sellerOrderId"], energy_am, exec_price)
 
-    if event['event'] == 'OrderMatched':
-        oid = Web3.to_hex(event['args']['buyerOrderId'])
-        energy_am = event['args']['energyAmount'] / 100
-        exec_price = event['args']['pricePerUnit']
-        updateOrder(oid, event['args']['sellerOrderId'], energy_am, exec_price)
-        
-    #add orderId to OrderCanceled
-    if event['event'] == 'OrderCanceled':
-        oid = Web3.to_hex(event['args']['oid'])
+    # add orderId to OrderCanceled
+    if event["event"] == "OrderCanceled":
+        oid = Web3.to_hex(event["args"]["oid"])
         removeOrder(oid)
 
-    if event['event'] == 'OrderPlaced':
-        oid = Web3.to_hex(event['args']['orderId'])
-        price = event['args']['pricePerUnit'] / 100
-        energy_am = event['args']['amount'] / 100
-        addOrder(oid, event['args']['isBuy'], energy_am, price, event['args']['market'])
+    if event["event"] == "OrderPlaced":
+        oid = Web3.to_hex(event["args"]["orderId"])
+        price = event["args"]["pricePerUnit"] / 100
+        energy_am = event["args"]["amount"] / 100
+        addOrder(oid, event["args"]["isBuy"], energy_am, price, event["args"]["market"])
 
 
-
-# collect broadcasted messages sent from smart contract 
+# collect broadcasted messages sent from smart contract
 seen_tx_hash_OrderPlaced = deque(maxlen=20)
 seen_tx_hash_OrderCancelled = deque(maxlen=20)
 seen_tx_hash_OrderMatchedBuyer = deque(maxlen=20)
 seen_tx_hash_OrderMatchedSeller = deque(maxlen=20)
 
+
 def listen_for_events(event_name, filters):
     event = getattr(orderbook_contract.events, event_name)
     last_block = w3.eth.block_number
-    print(f"Listening for {event_name} from block {last_block} with filters {filters}...")
+    print(
+        f"Listening for {event_name} from block {last_block} with filters {filters}..."
+    )
 
     while True:
         current_block = w3.eth.block_number
-        #logs = event.get_logs(fromBlock=last_block + 1, toBlock='latest', argument_filters=filters)
-        logs = event.get_logs(from_block=last_block + 1, to_block='latest', argument_filters=filters)
-        
-        for log in logs:
-            tx_hash = (log['transactionHash'].hex(), log['logIndex'])
+        # logs = event.get_logs(fromBlock=last_block + 1, toBlock='latest', argument_filters=filters)
+        logs = event.get_logs(
+            from_block=last_block + 1, to_block="latest", argument_filters=filters
+        )
 
-            if event_name == 'OrderPlaced':
+        for log in logs:
+            tx_hash = (log["transactionHash"].hex(), log["logIndex"])
+
+            if event_name == "OrderPlaced":
                 if tx_hash not in seen_tx_hash_OrderPlaced:
                     seen_tx_hash_OrderPlaced.append(tx_hash)
                     handle_event(log)
-            elif event_name == 'OrderCancelled':
+            elif event_name == "OrderCancelled":
                 if tx_hash not in seen_tx_hash_OrderCancelled:
                     seen_tx_hash_OrderCancelled.append(tx_hash)
                     handle_event(log)
-            elif event_name == 'OrderMatched' and 'buyer' in filters:
+            elif event_name == "OrderMatched" and "buyer" in filters:
                 if tx_hash not in seen_tx_hash_OrderMatchedBuyer:
                     seen_tx_hash_OrderMatchedBuyer.append(tx_hash)
                     handle_event(log)
-            elif event_name == 'OrderMatched' and 'seller' in filters:
+            elif event_name == "OrderMatched" and "seller" in filters:
                 if tx_hash not in seen_tx_hash_OrderMatchedSeller:
                     seen_tx_hash_OrderMatchedSeller.append(tx_hash)
                     handle_event(log)
@@ -370,42 +377,46 @@ def listen_for_events(event_name, filters):
         last_block = current_block
         sleep(2)
 
+
 def spin_event_threads():
     event_configs = [
-        ('OrderPlaced', {'user': ACCOUNT}),
-        ('OrderCancelled', {'user': ACCOUNT}),
-        ('OrderMatched', {'buyer': ACCOUNT}),
-        ('OrderMatched', {'seller': ACCOUNT})
+        ("OrderPlaced", {"user": ACCOUNT}),
+        ("OrderCancelled", {"user": ACCOUNT}),
+        ("OrderMatched", {"buyer": ACCOUNT}),
+        ("OrderMatched", {"seller": ACCOUNT}),
     ]
-    
+
     for event_name, filters in event_configs:
         thread = threading.Thread(target=listen_for_events, args=(event_name, filters))
         thread.daemon = True
         thread.start()
 
 
-
-
-
 def determine_sell_amount(trend, base_amount=1.0):
     global battery
     battery_ratio = battery / BATTERY_CAPACITY
-    trend_strength = max(trend / BATTERY_CAPACITY, 0)  # Only positive trend encourages selling
+    trend_strength = max(
+        trend / BATTERY_CAPACITY, 0
+    )  # Only positive trend encourages selling
     noise = random.uniform(-0.2, 0.2)
 
     adjustment = 0.6 * battery_ratio + 0.3 * trend_strength + 0.1 * noise
     return max(0.1, round(base_amount * adjustment, 2))
 
+
 def determine_buy_amount(trend, base_amount=1.0):
     global battery
     empty_ratio = 1 - (battery / BATTERY_CAPACITY)
-    trend_strength = max(-trend / BATTERY_CAPACITY, 0)  # Only negative trend encourages buying
+    trend_strength = max(
+        -trend / BATTERY_CAPACITY, 0
+    )  # Only negative trend encourages buying
     noise = random.uniform(-0.2, 0.2)
 
     adjustment = 0.6 * empty_ratio + 0.3 * trend_strength + 0.1 * noise
     return max(0.1, round(base_amount * adjustment, 2))
 
-# automates trading. More likely to make a trade when battery is full/empty 
+
+# automates trading. More likely to make a trade when battery is full/empty
 def determine_trades():
     try:
         best_bid, best_ask, last_price = orderbook_contract.functions.getPrice().call()
@@ -413,48 +424,70 @@ def determine_trades():
         print(f"Failed to fetch price: {e}")
         return
 
-    decision_threshold = random.uniform(0.05, 0.3)             #adds noise to automated trading decisions
-    base_amount_multiplier = random.uniform(.05, .2)
+    decision_threshold = random.uniform(
+        0.05, 0.3
+    )  # adds noise to automated trading decisions
+    base_amount_multiplier = random.uniform(0.05, 0.2)
     base_amount = round(BATTERY_CAPACITY * base_amount_multiplier, 2)
     order_type_prob = random.random()
-    #volatility_factor = min(abs(energy_moving_average) / BATTERY_CAPACITY, 1.0)
-    isMarket = True if order_type_prob < .20 else False        # maybe make this more dynamic
+    # volatility_factor = min(abs(energy_moving_average) / BATTERY_CAPACITY, 1.0)
+    isMarket = True if order_type_prob < 0.20 else False  # maybe make this more dynamic
 
-    if battery + energy_moving_average >= BATTERY_CAPACITY * (1-decision_threshold): # we are close to full battery and should sell some energy 
+    if battery + energy_moving_average >= BATTERY_CAPACITY * (
+        1 - decision_threshold
+    ):  # we are close to full battery and should sell some energy
         sell_am = determine_sell_amount(energy_moving_average, base_amount)
-        sell_am = (.5 * battery) if battery - sell_am < 0 else sell_am
+        sell_am = (0.5 * battery) if battery - sell_am < 0 else sell_am
         direction = random.choice([-1, 1])  # Randomly go above or below reference
         # if your battery is neering full you are more likely to sell for less
-        price_multiplier = random.triangular(0.0, -0.03, 0.0) if battery/BATTERY_CAPACITY < .85 else random.triangular(0.0, -0.03, -0.01)
-        limit_price = round((best_bid*(1+price_multiplier*direction)),2)
+        price_multiplier = (
+            random.triangular(0.0, -0.03, 0.0)
+            if battery / BATTERY_CAPACITY < 0.85
+            else random.triangular(0.0, -0.03, -0.01)
+        )
+        limit_price = round((best_bid * (1 + price_multiplier * direction)), 2)
         try:
-            #scale val
+            # scale val
             send_transaction(
-                orderbook_contract.funcitons.placeOrder( # TODO descale by 100 for transaction notifications
-                    int(sell_am * 100),             # quantity (scale by 100 because solidity does not have a decimal type)
-                    int(limit_price * 100),         # price per unit
-                    False,                          #isBuy
-                    isMarket
+                orderbook_contract.funcitons.placeOrder(  # TODO descale by 100 for transaction notifications
+                    int(
+                        sell_am * 100
+                    ),  # quantity (scale by 100 because solidity does not have a decimal type)
+                    int(limit_price * 100),  # price per unit
+                    False,  # isBuy
+                    isMarket,
                 )
             )
         except Exception as e:
             print(f"Failed to place sell order: {e}")
 
-    if battery + energy_moving_average <= BATTERY_CAPACITY * decision_threshold: # we are close to empty and should buy energy
+    if (
+        battery + energy_moving_average <= BATTERY_CAPACITY * decision_threshold
+    ):  # we are close to empty and should buy energy
         buy_am = determine_buy_amount(energy_moving_average, base_amount)
-        buy_am = (.5 * (BATTERY_CAPACITY - battery)) if battery + buy_am > BATTERY_CAPACITY else buy_am
+        buy_am = (
+            (0.5 * (BATTERY_CAPACITY - battery))
+            if battery + buy_am > BATTERY_CAPACITY
+            else buy_am
+        )
         direction = random.choice([-1, 1])  # Randomly go above or below reference
         # if your battery is neering empty you are more willing to pay a higher price
-        price_multiplier = random.triangular(0.0, 0.03, 0.00) if battery/BATTERY_CAPACITY > .15 else random.triangular(0.0, 0.03, 0.02)
-        limit_price = round((best_ask*(1+price_multiplier)),2)
+        price_multiplier = (
+            random.triangular(0.0, 0.03, 0.00)
+            if battery / BATTERY_CAPACITY > 0.15
+            else random.triangular(0.0, 0.03, 0.02)
+        )
+        limit_price = round((best_ask * (1 + price_multiplier)), 2)
         try:
-            #scale val
+            # scale val
             send_transaction(
-                orderbook_contract.funcitons.placeOrder( 
-                    int(buy_am * 100),             # quantity (scale by 100 because solidity does not have a decimal type)
-                    int(limit_price * 100),         # price per unit
-                    True,                          #isBuy
-                    isMarket
+                orderbook_contract.funcitons.placeOrder(
+                    int(
+                        buy_am * 100
+                    ),  # quantity (scale by 100 because solidity does not have a decimal type)
+                    int(limit_price * 100),  # price per unit
+                    True,  # isBuy
+                    isMarket,
                 )
             )
         except Exception as e:
@@ -465,18 +498,27 @@ def determine_trades():
 def update_battery_sync(device_type, energy_kwh):
     global battery, energy_bought_from_grid_kWh, energy_moving_average
 
-    with battery_lock: 
-        signed_kwh = energy_kwh if device_type == 'production' else -energy_kwh
-        energy_moving_average = MOVING_AVERAGE_ALPHA * signed_kwh + (1 - MOVING_AVERAGE_ALPHA) * energy_moving_average
+    with battery_lock:
+        signed_kwh = energy_kwh if device_type == "production" else -energy_kwh
+        energy_moving_average = (
+            MOVING_AVERAGE_ALPHA * signed_kwh
+            + (1 - MOVING_AVERAGE_ALPHA) * energy_moving_average
+        )
 
-        if device_type == 'production':
-            battery = energy_kwh + battery if energy_kwh + battery <= BATTERY_CAPACITY else BATTERY_CAPACITY
+        if device_type == "production":
+            battery = (
+                energy_kwh + battery
+                if energy_kwh + battery <= BATTERY_CAPACITY
+                else BATTERY_CAPACITY
+            )
             ## If energy is needed, take from battery before you take from grid (assume grid has unlimited)
-        if device_type == 'consumption':
+        if device_type == "consumption":
             if battery >= energy_kwh:
                 battery = battery - energy_kwh
             else:
-                energy_bought_from_grid_kWh = energy_bought_from_grid_kWh + (battery - energy_kwh)
+                energy_bought_from_grid_kWh = energy_bought_from_grid_kWh + (
+                    battery - energy_kwh
+                )
                 battery = 0
 
         determine_trades()
@@ -484,7 +526,9 @@ def update_battery_sync(device_type, energy_kwh):
 
 @app.websocket("/ws/{device_id}")
 async def websocket_endpoint(websocket: WebSocket, device_id: str):
-    """WebSocket endpoint for receiving energy data from devices."""
+    """
+    WebSocket endpoint for receiving energy data from devices.
+    """
     await websocket.accept()
     connected_devices.add(device_id)
     logger.info(f"Device Connected | ID: {device_id}")
@@ -495,18 +539,18 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
             message = json.loads(data)
             device_id = message["device"]["id"]
             energy_kwh = message["energy_kwh"]
+            timestamp = message["timestamp"]
             device_type = message["device"]["type"]
 
-           
             await asyncio.get_event_loop().run_in_executor(
                 None, update_battery_sync, device_type, energy_kwh
             )
-               
 
             # Log each energy transaction.
+            # Log each energy transaction
             logger.info(
-                f"Energy Transaction | ID: {device_id} | Type: {device_type} | kWh: "
-                f"{energy_kwh:.8f}"
+                f"Energy Transaction | ID: {device_id} | Type: {device_type} "
+                f"| kWh: {energy_kwh:.8f}"
             )
 
     except WebSocketDisconnect:
@@ -525,6 +569,7 @@ async def get_user_orders():
     global orders
     return orders
 
+
 @app.get("/orderbook")
 async def get_blockchain_orderbook():
     try:
@@ -539,9 +584,8 @@ async def get_blockchain_orderbook():
         "sell_orders": sell_orders,
         "best_bid": best_bid,
         "best_ask": best_ask,
-        "last_price": last_price
+        "last_price": last_price,
     }
-
 
 
 @app.on_event("startup")
