@@ -19,6 +19,11 @@ G_PORT = os.environ["G_PORT"]
 HTTP_PORT = os.environ["HTTP_PORT"]
 WS_PORT = os.environ["WS_PORT"]
 AUTH_RPC_PORT = os.environ["AUTH_RPC_PORT"]
+AUTH_ENODES = os.environ["AUTH_ENODES"]
+CONTRACT_ABI_PATH = os.environ["CONTRACT_ABI_PATH"]
+CONTRACT_ADDRESS = os.environ["CONTRACT_ADDRESS"]
+DISABLE_BLOCKCHAIN = os.environ.get("DISABLE_BLOCKCHAIN", "false").lower() == "true"
+WEB3_PROVIDER = f"http://localhost:{HTTP_PORT}"
 
 
 # Interval in seconds by which the meter will ping the central server
@@ -26,8 +31,10 @@ PING_INTERVAL = 10
 
 # How many KwH the battery can hold
 BATTERY_CAPACITY = 13.5
+
 # moving average window to track battery
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
+
 # the moving average of net energy production
 energy_moving_average = 0
 
@@ -35,19 +42,25 @@ battery = 0  # units are kWh
 battery_lock = Lock()
 energy_bought_from_grid_kWh = 0
 
+
+##### TODO Block #####
 ACCOUNT = os.environ["ACCOUNT"]  # account address generated when creating geth account
 KEYSTORE_FILE = os.environ[
     "KEYSTORE_FILE"
-]  # Path to keystore file generated when creating geth acctoun
-CONTRACT_ABI_PATH = os.environ["CONTRACT_ABI_PATH"]
-KEYSTORE_PASSWORD = os.environ["KEYSTORE_PASSWORD"]
-WEB3_PROVIDER = os.environ["WEB3_PROVIDER"]
-CONTRACT_ADDRESS = os.environ["CONTRACT_ADDRESS"]
-AUTH_ENODES = os.environ["AUTH_ENODES"]
-w3 = Web3(Web3.HTTPProvider(WEB3_PROVIDER))
-CONTRACT_ADDRESS = w3.to_checksum_address(CONTRACT_ADDRESS)
-DISABLE_BLOCKCHAIN = os.environ.get("DISABLE_BLOCKCHAIN", "false").lower() == "true"
+]  # Path to keystore file generated when creating geth account
 
+
+KEYSTORE_PASSWORD = os.environ["KEYSTORE_PASSWORD"]  # /password.txt after geth setup
+w3 = Web3(
+    Web3.HTTPProvider(WEB3_PROVIDER)
+)  # Initialized as None at first. Will be changed AFTER geth account setup
+CONTRACT_ADDRESS = w3.to_checksum_address(
+    CONTRACT_ADDRESS
+)  # Initialized on-demand after geth account setup
+##### END TODO Block #####
+
+
+## TODO: Move this code to after geth account setup
 if w3.is_connected():
     print("Connected to node!")
     print(f"Chain ID: {w3.eth.chain_id}")
@@ -62,6 +75,7 @@ with open(KEYSTORE_FILE) as f:
 with open(CONTRACT_ABI_PATH) as f:
     contract_abi = json.load(f)
 
+# TODO: Initialize these clients as None and then update after geth account setup
 private_key = w3.eth.account.decrypt(keystore_json, KEYSTORE_PASSWORD)
 account = w3.eth.account.from_key(private_key)
 orderbook_contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=contract_abi)
@@ -80,6 +94,8 @@ logger = logging.getLogger(__name__)
 
 connected_devices = set()
 global_server_api = CentralServerAPI(CLIENT_ID, CLIENT_SECRET, scope="smart_meter")
+blockchain_started = False
+blockchain_started_lock = Lock()
 
 
 # store user orders
@@ -201,14 +217,18 @@ async def geth_setup_async(port1, is_auth="n"):
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
+    print("Spinning up Ethereum event threads...")
+    spin_event_threads()
+
+    global blockchain_started
+    with blockchain_started_lock:
+        blockchain_started = True
+
     async for line in proc.stdout:
         logger.info(f"[GETH]: {line.strip()}")
     await proc.wait()
 
     logger.error(f"[GETH exited with code {proc.returncode}]")
-
-    while True:
-        await asyncio.sleep(10)
 
 
 @app.on_event("startup")
@@ -281,8 +301,8 @@ def updateOrder(buyerOId, sellerOId, quantity, exec_price):
         oid = buyerOId if buyerOId in orders else sellerOId
         if oid not in orders:
             return False
-        o["executed_price"] = exec_price
         o = orders.get(oid)
+        o["executed_price"] = exec_price
         o["curr_qty"] -= quantity
         if o["curr_qty"] <= 0:
             orders.pop(oid, None)
@@ -302,7 +322,7 @@ def addOrder(orderId, isBuy, amount, pricePerUnit, isMarket):
 
 def removeOrder(orderId):
     with orders_lock:
-        o = orders.pop(orderId, None)
+        orders.pop(orderId, None)
 
 
 def handle_event(event):
@@ -379,6 +399,7 @@ def listen_for_events(event_name, filters):
 
 
 def spin_event_threads():
+    # TODO: Initialize all Web3 client info, find account, etc.
     event_configs = [
         ("OrderPlaced", {"user": ACCOUNT}),
         ("OrderCancelled", {"user": ACCOUNT}),
@@ -511,7 +532,7 @@ def update_battery_sync(device_type, energy_kwh):
                 if energy_kwh + battery <= BATTERY_CAPACITY
                 else BATTERY_CAPACITY
             )
-            ## If energy is needed, take from battery before you take from grid (assume grid has unlimited)
+            # If energy is needed, take from battery before you take from grid (assume grid has unlimited)
         if device_type == "consumption":
             if battery >= energy_kwh:
                 battery = battery - energy_kwh
@@ -541,7 +562,9 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
             energy_kwh = message["energy_kwh"]
             timestamp = message["timestamp"]
             device_type = message["device"]["type"]
-
+            with blockchain_started_lock:
+                if not blockchain_started:
+                    continue
             await asyncio.get_event_loop().run_in_executor(
                 None, update_battery_sync, device_type, energy_kwh
             )
@@ -586,9 +609,3 @@ async def get_blockchain_orderbook():
         "best_ask": best_ask,
         "last_price": last_price,
     }
-
-
-@app.on_event("startup")
-def on_startup():
-    print("Spinning up Ethereum event threads...")
-    spin_event_threads()

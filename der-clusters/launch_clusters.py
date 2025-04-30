@@ -25,6 +25,8 @@ def build_compose_yaml(
     base_port,
     chain_id,
     auth_node_enodes,
+    contract_abi_path,
+    contract_address,
     disable_blockchain,
 ):
     services = {}
@@ -52,6 +54,8 @@ def build_compose_yaml(
                 f"WS_PORT={ws_port}",
                 f"AUTH_ENODES={auth_node_enodes}",
                 f"DISABLE_BLOCKCHAIN={str(disable_blockchain).lower()}",
+                f"CONTRACT_ABI_PATH={contract_abi_path}",
+                f"CONTRACT_ADDRESS={contract_address}",
             ],
         }
 
@@ -83,7 +87,24 @@ def main():
         description="Launch or stop DER clusters using a registration token"
     )
     parser.add_argument("registration_token", type=str, help="Registration token")
-    parser.add_argument("--chain-id", type=int, help="chain id number for your chain")
+    parser.add_argument(
+        "--chain-id",
+        type=int,
+        help="chain id number for your chain",
+        default=os.environ.get("CHAIN_ID", None),
+    )
+    parser.add_argument(
+        "--contract-abi-path",
+        type=int,
+        help="Contract ABI Path",
+        default=os.environ.get("CONTRACT_ABI_PATH", None),
+    )
+    parser.add_argument(
+        "--contract-address",
+        type=int,
+        help="Contract address",
+        default=os.environ.get("CONTRACT_ADDRESS", None),
+    )
 
     parser.add_argument(
         "--central-server-origin",
@@ -93,6 +114,7 @@ def main():
     parser.add_argument(
         "--auth-node-enodes",
         type=str,
+        default=os.environ.get("AUTH_ENODES", None),
         help="Enodes of authourity nodes comma seperated, no spaces",
     )
     parser.add_argument(
@@ -110,6 +132,23 @@ def main():
         help="Prevents light nodes from being created and only simulates the devices.",
     )
     args = parser.parse_args()
+    if not args.disable_blockchain:
+        if args.chain_id is None and not args.disable_blockchain:
+            raise ValueError(
+                "Missing chain id! Pass as argument or declare as CHAIN_ID env var."
+            )
+        if args.auth_enodes is None:
+            raise ValueError(
+                "Missing auth enodes! Pass as argument or declare as AUTH_ENODES env var."
+            )
+        if args.contract_abi_path is None:
+            raise ValueError(
+                "Missing contract abi path! Pass as argument or declare as CONTRACT_ABI_PATH env var."
+            )
+        if args.contract_address is None:
+            raise ValueError(
+                "Missing contract address! Pass as argument or declare as CONTRACT_ADDRESS env var."
+            )
 
     clients = fetch_client_credentials(
         args.central_server_origin, args.registration_token
@@ -120,6 +159,8 @@ def main():
         args.base_port,
         args.chain_id,
         args.auth_node_enodes,
+        args.contract_abi_path,
+        args.contract_address,
         args.disable_blockchain,
     )
     run_docker_compose(compose_dict, stop=args.stop)
