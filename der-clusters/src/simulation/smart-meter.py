@@ -43,43 +43,11 @@ battery_lock = Lock()
 energy_bought_from_grid_kWh = 0
 
 
-##### TODO Block #####
-ACCOUNT = os.environ["ACCOUNT"]  # account address generated when creating geth account
-KEYSTORE_FILE = os.environ[
-    "KEYSTORE_FILE"
-]  # Path to keystore file generated when creating geth account
 
-
-KEYSTORE_PASSWORD = os.environ["KEYSTORE_PASSWORD"]  # /password.txt after geth setup
-w3 = Web3(
-    Web3.HTTPProvider(WEB3_PROVIDER)
-)  # Initialized as None at first. Will be changed AFTER geth account setup
-CONTRACT_ADDRESS = w3.to_checksum_address(
-    CONTRACT_ADDRESS
-)  # Initialized on-demand after geth account setup
-##### END TODO Block #####
-
-
-## TODO: Move this code to after geth account setup
-if w3.is_connected():
-    print("Connected to node!")
-    print(f"Chain ID: {w3.eth.chain_id}")
-    print(f"Block Number: {w3.eth.block_number}")
-else:
-    print(
-        "Failed to connect to node. Check if geth is running with --http on port 8545."
-    )
-
-with open(KEYSTORE_FILE) as f:
-    keystore_json = json.load(f)
-with open(CONTRACT_ABI_PATH) as f:
-    contract_abi = json.load(f)
-
-# TODO: Initialize these clients as None and then update after geth account setup
-private_key = w3.eth.account.decrypt(keystore_json, KEYSTORE_PASSWORD)
-account = w3.eth.account.from_key(private_key)
-orderbook_contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=contract_abi)
-
+private_key = None
+account = None
+orderbook_contract = None
+w3 = None
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -400,6 +368,32 @@ def listen_for_events(event_name, filters):
 
 def spin_event_threads():
     # TODO: Initialize all Web3 client info, find account, etc.
+    global private_key, account, orderbook_contract, w3
+    ACCOUNT = os.environ["ACCOUNT"]  # account address generated when creating geth account
+    KEYSTORE_FILE = os.environ["KEYSTORE_FILE"]  # Path to keystore file generated when creating geth account
+    KEYSTORE_PASSWORD = os.environ["KEYSTORE_PASSWORD"]  # /password.txt after geth setup
+    w3 = Web3(
+        Web3.HTTPProvider(WEB3_PROVIDER)
+    )       # Initialized as None at first. Will be changed AFTER geth account setup
+    CONTRACT_ADDRESS = w3.to_checksum_address(os.environ["CONTRACT_ADDRESS"])  # Initialized on-demand after geth account setup
+    if w3.is_connected():
+        print("Connected to node!")
+        print(f"Chain ID: {w3.eth.chain_id}")
+        print(f"Block Number: {w3.eth.block_number}")
+    else:
+        print(
+        "Failed to connect to node. Check if geth is running with --http on port 8545."
+        )
+
+    with open(KEYSTORE_FILE) as f:
+        keystore_json = json.load(f)
+    with open(CONTRACT_ABI_PATH) as f:
+        contract_abi = json.load(f)
+
+    private_key = w3.eth.account.decrypt(keystore_json, KEYSTORE_PASSWORD)
+    account = w3.eth.account.from_key(private_key)
+    orderbook_contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=contract_abi)
+
     event_configs = [
         ("OrderPlaced", {"user": ACCOUNT}),
         ("OrderCancelled", {"user": ACCOUNT}),
