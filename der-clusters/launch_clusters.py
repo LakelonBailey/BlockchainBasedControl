@@ -95,19 +95,20 @@ def main():
     )
     parser.add_argument(
         "--contract-abi-path",
-        type=int,
+        type=str,
         help="Contract ABI Path",
         default=os.environ.get("CONTRACT_ABI_PATH", None),
     )
     parser.add_argument(
         "--contract-address",
-        type=int,
+        type=str,
         help="Contract address",
         default=os.environ.get("CONTRACT_ADDRESS", None),
     )
 
     parser.add_argument(
         "--central-server-origin",
+        type=str,
         default=os.environ.get("CENTRAL_SERVER_ORIGIN", "http://localhost:8000"),
         help="Origin URL for the central server",
     )
