@@ -22,7 +22,7 @@ class LEDLight(ConsumptionDevice):
         super().__init__(
             device_name="LED Light",
             consumption_tier=LowerPowerTier(),
-            energy_factors=[PeakHoursFactor()],
+            energy_factors=[RandomUsageFactor()],
         )
 
 
@@ -33,7 +33,7 @@ class DesktopComputer(ConsumptionDevice):
         super().__init__(
             device_name="Desktop Computer",
             consumption_tier=LowPowerTier(),
-            energy_factors=[WeekendFactor()],
+            energy_factors=[RandomUsageFactor()],
         )
 
 
@@ -48,15 +48,15 @@ class WashingMachine(ConsumptionDevice):
         )
 
 
-class ElectricOven(ConsumptionDevice):
-    """An electric oven that is more likely to be used on weekends and peak hours"""
+# class ElectricOven(ConsumptionDevice):
+#     """An electric oven that is more likely to be used on weekends and peak hours"""
 
-    def __init__(self):
-        super().__init__(
-            device_name="Electric Oven",
-            consumption_tier=MediumPowerTier(),
-            energy_factors=[WeekendFactor(), PeakHoursFactor()],
-        )
+#     def __init__(self):
+#         super().__init__(
+#             device_name="Electric Oven",
+#             consumption_tier=MediumPowerTier(),
+#             energy_factors=[WeekendFactor(), PeakHoursFactor()],
+#         )
 
 
 class AirConditioner(ConsumptionDevice):
@@ -66,7 +66,7 @@ class AirConditioner(ConsumptionDevice):
         super().__init__(
             device_name="Air Conditioner",
             consumption_tier=HighPowerTier(),
-            energy_factors=[SeasonalFactor()],
+            energy_factors=[RandomUsageFactor()],
         )
 
 
@@ -77,55 +77,55 @@ class EVCharger(ConsumptionDevice):
         super().__init__(
             device_name="EV Charger",
             consumption_tier=HigherPowerTier(),
-            energy_factors=[PeakHoursFactor()],
-        )
-
-
-class IndustrialHVAC(ConsumptionDevice):
-    """
-    An industrial HVAC system that uses more power in the summer and operates
-    unpredictably
-    """
-
-    def __init__(self):
-        super().__init__(
-            device_name="Industrial HVAC",
-            consumption_tier=HigherPowerTier(),
-            energy_factors=[SeasonalFactor(), RandomUsageFactor()],
-        )
-
-
-class SolarPoweredDevice(ConsumptionDevice):
-    """A device that only functions efficiently when solar energy is available"""
-
-    def __init__(self):
-        super().__init__(
-            device_name="Solar Powered Device",
-            consumption_tier=LowPowerTier(),
-            energy_factors=[SolarFactor()],
-        )
-
-
-class SmartHomeSystem(ConsumptionDevice):
-    """
-    A smart home system that operates at minimal power but increases usage on
-    weekends
-    """
-
-    def __init__(self):
-        super().__init__(
-            device_name="Smart Home System",
-            consumption_tier=LowerPowerTier(),
-            energy_factors=[WeekendFactor()],
-        )
-
-
-class Microwave(ConsumptionDevice):
-    """A microwave that consumes high energy in short bursts, randomly used"""
-
-    def __init__(self):
-        super().__init__(
-            device_name="Microwave",
-            consumption_tier=MediumPowerTier(),
             energy_factors=[RandomUsageFactor()],
         )
+
+
+# class IndustrialHVAC(ConsumptionDevice):
+#     """
+#     An industrial HVAC system that uses more power in the summer and operates
+#     unpredictably
+#     """
+
+#     def __init__(self):
+#         super().__init__(
+#             device_name="Industrial HVAC",
+#             consumption_tier=HigherPowerTier(),
+#             energy_factors=[SeasonalFactor(), RandomUsageFactor()],
+#         )
+
+
+# class SolarPoweredDevice(ConsumptionDevice):
+#     """A device that only functions efficiently when solar energy is available"""
+
+#     def __init__(self):
+#         super().__init__(
+#             device_name="Solar Powered Device",
+#             consumption_tier=LowPowerTier(),
+#             energy_factors=[SolarFactor()],
+#         )
+
+
+# class SmartHomeSystem(ConsumptionDevice):
+#     """
+#     A smart home system that operates at minimal power but increases usage on
+#     weekends
+#     """
+
+#     def __init__(self):
+#         super().__init__(
+#             device_name="Smart Home System",
+#             consumption_tier=LowerPowerTier(),
+#             energy_factors=[WeekendFactor()],
+#         )
+
+
+# class Microwave(ConsumptionDevice):
+#     """A microwave that consumes high energy in short bursts, randomly used"""
+
+#     def __init__(self):
+#         super().__init__(
+#             device_name="Microwave",
+#             consumption_tier=MediumPowerTier(),
+#             energy_factors=[RandomUsageFactor()],
+#         )
