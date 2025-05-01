@@ -88,15 +88,15 @@ def cleanup():
     if cleanup_done:
         return
     cleanup_done = True
-    print("Performing cleanup...removing all your orders")
+    logger.info("Performing cleanup...removing all your orders")
     try:
         send_transaction(orderbook_contract.functions.removeAllOrdersForUser(ACCOUNT))
     except Exception as e:
-        print(f"Failed to remove orders: {e}")
+        logger.info(f"Failed to remove orders: {e}")
 
 
 def signal_handler(signum, frame):
-    print(f"\nCaught signal: {signum}")
+    logger.log(f"\nCaught signal: {signum}")
     cleanup()
     sys.exit(0)
 
@@ -222,6 +222,7 @@ async def geth_setup_async(port1, is_auth="n"):
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
+    time.sleep(5)
     print("Spinning up Ethereum event threads...")
     await spin_event_threads()
 
@@ -372,8 +373,8 @@ def removeOrder(orderId):
 
 def handle_event(event):
 
-    print(f"\nNew Event: {event['event']}")
-    print(f"Tx: {event['transactionHash'].hex()}, Block: {event['blockNumber']}")
+    logger.info(f"\nNew Event: {event['event']}")
+    logger.info(f"Tx: {event['transactionHash'].hex()}, Block: {event['blockNumber']}")
 
     for key, value in event["args"].items():
         if isinstance(value, bytes):
@@ -448,8 +449,16 @@ async def spin_event_threads():
     # TODO: Initialize all Web3 client info, find account, etc.
     # TODO: Initialize all Web3 client info, find account, etc.
     global ACCOUNT
-    while not os.path.exists(...):
+
+    
+#   while not os.path.exists("/app/auto-geth-setup/geth_node/address.txt"):
+#        sleep(1)
+#        continue
+
+    while not os.path.exists("/app/auto-geth-setup/geth_node/address.txt"):
         await asyncio.sleep(1)
+
+
 
     global private_key, account, orderbook_contract, w3
     with open("/app/auto-geth-setup/geth_node/address.txt", "r") as account_file:
@@ -637,8 +646,8 @@ def update_battery_sync(device_type, energy_kwh):
         if current_time - last_trade >= TRADE_WAIT_TIME:
             determine_trades()
             last_trade = time.time()
-
-
+        logger.info(f"Battery: {battery}")
+        logger.info(f"Battery Capacity: {BATTERY_CAPACITY}")       
 @app.websocket("/ws/{device_id}")
 async def websocket_endpoint(websocket: WebSocket, device_id: str):
     """
@@ -665,10 +674,10 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
 
             # Log each energy transaction.
             # Log each energy transaction
-            logger.info(
-                f"Energy Transaction | ID: {device_id} | Type: {device_type} "
-                f"| kWh: {energy_kwh:.8f}"
-            )
+    #        logger.info(
+     #           f"Energy Transaction | ID: {device_id} | Type: {device_type} "
+     #           f"| kWh: {energy_kwh:.8f}"
+      #      )
 
     except WebSocketDisconnect:
         connected_devices.remove(device_id)
