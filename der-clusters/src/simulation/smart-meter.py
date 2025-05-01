@@ -44,6 +44,8 @@ BATTERY_CAPACITY = random.uniform(8, 14)
 # moving average window to track battery
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
 
+# Energy price when the order books are empty and nothing has been executed
+BASE_KWH_PRICE = .13    #TN's rate
 # the moving average of net energy production
 energy_moving_average = 0
 
@@ -549,7 +551,8 @@ def determine_trades():
             if battery / BATTERY_CAPACITY < 0.85
             else random.triangular(0.0, -0.03, -0.01)
         )
-        limit_price = round((best_bid * (1 + price_multiplier * direction)), 2)
+        my_bid = best_bid if best_bid > 0 else BASE_KWH_PRICE
+        limit_price = round((my_bid* (1 + price_multiplier * direction)), 2)
         try:
             # scale val
             send_transaction(
@@ -581,7 +584,8 @@ def determine_trades():
             if battery / BATTERY_CAPACITY > 0.15
             else random.triangular(0.0, 0.03, 0.02)
         )
-        limit_price = round((best_ask * (1 + price_multiplier)), 2)
+        my_ask = best_ask if best_ask > 0 else BASE_KWH_PRICE
+        limit_price = round((my_ask * (1 + price_multiplier)), 2)
         try:
             # scale val
             send_transaction(
