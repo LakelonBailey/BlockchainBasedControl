@@ -42,6 +42,7 @@ energy_moving_average = 0
 battery = 0  # units are kWh
 battery_lock = Lock()
 energy_bought_from_grid_kWh = 0
+main_loop: asyncio.AbstractEventLoop
 
 
 private_key = None
@@ -218,7 +219,8 @@ async def start_ping_task():
     On application startup, kick off an async task that pings the central server
     every 10 seconds.
     """
-    # asyncio.create_task(geth_setup_async(8900))
+    global main_loop
+    main_loop = asyncio.get_running_loop()
     asyncio.create_task(ping_loop())
 
 
@@ -279,7 +281,6 @@ def updateOrder(buyerOId, sellerOId, quantity, exec_price):
             battery = max(battery - quantity, 0)
 
     with orders_lock:
-        loop = asyncio.get_event_loop()
         oid = buyerOId if buyerOId in orders else sellerOId
         if oid not in orders:
             return False
@@ -292,11 +293,11 @@ def updateOrder(buyerOId, sellerOId, quantity, exec_price):
             orders.pop(oid, None)
 
         if is_first_transaction:
-            loop.run_until_complete(
-                global_server_api.update_order(oid, {"state": "matched"})
+            asyncio.run_coroutine_threadsafe(
+                global_server_api.update_order(oid, {"state": "matched"}), main_loop
             )
 
-        loop.run_until_complete(
+        asyncio.run_coroutine_threadsafe(
             global_server_api.create_transaction(
                 oid, {"amount": quantity, "executed_price": exec_price}
             )
@@ -314,8 +315,7 @@ def addOrder(orderId, isBuy, amount, pricePerUnit, isMarket):
                 executed_price=-1,  # the price that the most recently updated transaction executes at -> this value gets updated
                 curr_qty=amount,  # how much quantity is still outstanding -> this value gets updated
             )
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(
+            asyncio.run_coroutine_threadsafe(
                 global_server_api.create_order(
                     orderId,
                     {
