@@ -3,6 +3,7 @@ import {
   LoaderFunction,
   ActionFunction,
 } from "react-router-dom";
+import Layout from "./layout";
 
 interface IRoute {
   path: string;
@@ -42,7 +43,11 @@ const router = createBrowserRouter(
     ...rest,
 
     // @ts-expect-error unknown type due to routing method
-    element: <Element />,
+    element: (
+      <Layout>
+        <Element />
+      </Layout>
+    ),
 
     // @ts-expect-error unknown type due to routing method
     ...(ErrorBoundary && { errorElement: <ErrorBoundary /> }),

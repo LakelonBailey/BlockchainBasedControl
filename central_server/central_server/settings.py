@@ -22,8 +22,11 @@ STATIC_ROOT = BASE_DIR / "static"
 
 if ENVIRONMENT == "local":
     ALLOWED_HOSTS = ["*"]
-    ALLOWED_ORIGINS = ["http://localhost:5173", "http://localhost:8000"]
     CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:8000",
+        "http://localhost:5173",
+    ]
     DEBUG = True
     TEMPLATE_PATH = "templates/"
     BASE_URL = "http://localhost:8000"

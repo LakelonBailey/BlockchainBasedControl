@@ -1,28 +1,37 @@
 # api/urls.py
-from django.urls import path
 from .views import (
     ClusterRegistrationView,
-    BatchTransactionUploadView,
     SmartMeterPingView,
     SmartMeterListAPIView,
-    SmartMeterDetailView,
     SmartMeterEnodeApiView,
     BCOrderAPIView,
     BCTransactionAPIView,
+    AnalyticsSummaryAPIView,
+    TransactionsOverTimeAPIView,
+    EnergyFlowAPIView,
+    AvgPriceOverTimeAPIView,
 )
+from django.urls import path, include
+
+analytics_patterns = [
+    path("summary/", AnalyticsSummaryAPIView.as_view(), name="analytics-summary"),
+    path(
+        "transactions_over_time/",
+        TransactionsOverTimeAPIView.as_view(),
+        name="analytics-tx-time",
+    ),
+    path("energy_flow/", EnergyFlowAPIView.as_view(), name="analytics-energy-flow"),
+    path(
+        "avg_price_over_time/",
+        AvgPriceOverTimeAPIView.as_view(),
+        name="analytics-avg-price",
+    ),
+]
+
 
 urlpatterns = [
-    path(
-        "transactions/batch_upload/",
-        BatchTransactionUploadView.as_view(),
-        name="batch-transaction-upload",
-    ),
+    path("analytics/", include((analytics_patterns, "analytics"))),
     path("meters/", SmartMeterListAPIView.as_view(), name="smart_meter_list"),
-    path(
-        "meters/<int:smart_meter_id>/analysis/",
-        SmartMeterDetailView.as_view(),
-        name="smart-meter-analysis",
-    ),
     path("register/", ClusterRegistrationView.as_view(), name="cluster_registration"),
     path("ping/", SmartMeterPingView.as_view(), name="smart_meter_ping"),
     path("enodes/", SmartMeterEnodeApiView.as_view(), name="smart_meter_enodes"),

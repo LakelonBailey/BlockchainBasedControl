@@ -1,30 +1,122 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework import status
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.pagination import PageNumberPagination
 from oauth2_provider.models import Application
 from .serializers import (
-    BatchTransactionUploadSerializer,
-    TransactionSerializer,
     SmartMeterCredentialSerializer,
     SmartMeterSerializer,
-    SmartMeterAnalysisSerializer,
     SmartMeterEnodeUploadSerializer,
     BCOrderSerializer,
     BCTransactionSerializer,
 )
-from .models import SmartMeter, Transaction, ClusterRegistration, BCOrder, BCTransaction
+from .models import SmartMeter, ClusterRegistration, BCOrder, BCTransaction
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication, TokenHasScope
 from django.utils import timezone
 import secrets
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.shortcuts import get_object_or_404
 from django.db import models
 from datetime import datetime, timedelta
 from pytz import UTC
+from django.db.models import Count, Sum, Q, Avg
+from django.db.models.functions import TruncDate
+from .serializers import (
+    AnalyticsSummarySerializer,
+    TimeSeriesPointSerializer,
+)
+
+
+# Your existing helper—filters by optional smart_meter_id query param
+def _filter_by_meters(request):
+    meter_ids = request.query_params.get("smart_meter_id")
+    if meter_ids:
+        ids = [u.strip() for u in meter_ids.split(",") if u.strip()]
+        order_qs = BCOrder.objects.filter(smart_meter__uuid__in=ids)
+        tx_qs = BCTransaction.objects.filter(order__smart_meter__uuid__in=ids)
+    else:
+        order_qs = BCOrder.objects.all()
+        tx_qs = BCTransaction.objects.all()
+    return order_qs, tx_qs
+
+
+class AnalyticsSummaryAPIView(APIView):
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [permissions.IsAuthenticated, TokenHasScope]
+    required_scopes = ["openid"]
+
+    def get(self, request):
+        order_qs, tx_qs = _filter_by_meters(request)
+
+        # use explicit aliases for each filtered Sum()
+        agg = tx_qs.aggregate(
+            total_energy_bought=Sum("amount", filter=Q(transaction_type="buy")),
+            total_energy_sold=Sum("amount", filter=Q(transaction_type="sell")),
+        )
+
+        summary = {
+            "total_orders": order_qs.count(),
+            "total_transactions": tx_qs.count(),
+            "total_energy_bought": agg["total_energy_bought"] or 0,
+            "total_energy_sold": agg["total_energy_sold"] or 0,
+        }
+        serializer = AnalyticsSummarySerializer(summary)
+        return Response(serializer.data)
+
+
+class TransactionsOverTimeAPIView(APIView):
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [permissions.IsAuthenticated, TokenHasScope]
+    required_scopes = ["openid"]
+
+    def get(self, request):
+        _, tx_qs = _filter_by_meters(request)
+        data = (
+            tx_qs.annotate(date=TruncDate("created_at"))
+            .values("date")
+            .annotate(count=Count("uuid"), total_amount=Sum("amount"))
+            .order_by("date")
+        )
+        serializer = TimeSeriesPointSerializer(data, many=True)
+        return Response(serializer.data)
+
+
+class EnergyFlowAPIView(APIView):
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [permissions.IsAuthenticated, TokenHasScope]
+    required_scopes = ["openid"]
+
+    def get(self, request):
+        _, tx_qs = _filter_by_meters(request)
+        data = (
+            tx_qs.annotate(date=TruncDate("created_at"))
+            .values("date")
+            .annotate(
+                energy_bought=Sum("amount", filter=Q(transaction_type="buy")),
+                energy_sold=Sum("amount", filter=Q(transaction_type="sell")),
+            )
+            .order_by("date")
+        )
+        serializer = TimeSeriesPointSerializer(data, many=True)
+        return Response(serializer.data)
+
+
+class AvgPriceOverTimeAPIView(APIView):
+    authentication_classes = [OAuth2Authentication]
+    permission_classes = [permissions.IsAuthenticated, TokenHasScope]
+    required_scopes = ["openid"]
+
+    def get(self, request):
+        _, tx_qs = _filter_by_meters(request)
+        data = (
+            tx_qs.annotate(date=TruncDate("created_at"))
+            .values("date")
+            .annotate(avg_price=Avg("executed_price"))
+            .order_by("date")
+        )
+        serializer = TimeSeriesPointSerializer(data, many=True)
+        return Response(serializer.data)
 
 
 class BCOrderAPIView(APIView):
@@ -72,7 +164,8 @@ class BCOrderAPIView(APIView):
 
 class BCTransactionAPIView(APIView):
     """
-    POST: Create a new BCTransaction and update the parent BCOrder's filled_amount and state.
+    POST: Create a new BCTransaction and update the parent BCOrder's filled_amount and
+    state.
     """
 
     authentication_classes = [OAuth2Authentication]
@@ -94,13 +187,6 @@ class BCTransactionAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SmartMeterDetailView(APIView):
-    def get(self, request, smart_meter_id):
-        smart_meter = get_object_or_404(SmartMeter, pk=smart_meter_id)
-        serializer = SmartMeterAnalysisSerializer(smart_meter)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 # Custom pagination class using 'page' and 'limit' query parameters
 class GeneralPagination(PageNumberPagination):
     page_size = 10  # default items per page
@@ -109,22 +195,11 @@ class GeneralPagination(PageNumberPagination):
     max_page_size = 100
 
 
-class TransactionListAPIView(generics.ListAPIView):
-    queryset = Transaction.objects.all().order_by("-timestamp")
-    serializer_class = TransactionSerializer
-    pagination_class = GeneralPagination
-
-    # Require OAuth2 authentication with the 'openid' scope.
-    authentication_classes = [OAuth2Authentication]
-    permission_classes = [permissions.IsAuthenticated, TokenHasScope]
-    required_scopes = ["openid"]
-
-
 class SmartMeterListAPIView(generics.ListAPIView):
     queryset = (
         SmartMeter.objects.all()
-        .order_by("-last_ping_ts")
-        .annotate(total_transactions=models.Count("transactions", distinct=True))
+        .order_by(models.F("last_ping_ts").desc(nulls_last=True))
+        .annotate(total_orders=models.Count("orders", distinct=True))
     )
     serializer_class = SmartMeterSerializer
     pagination_class = GeneralPagination
@@ -190,41 +265,14 @@ class SmartMeterPingView(APIView):
                         "timestamp": current_time.isoformat(),
                         "smart_meter_id": str(smart_meter.uuid),
                         "last_ping_ts": smart_meter.last_ping_ts.isoformat(),
-                        "total_transactions": (
-                            Transaction.objects.filter(smart_meter=smart_meter).count()
+                        "total_orders": (
+                            BCOrder.objects.filter(smart_meter=smart_meter).count()
                         ),
                     },
                 },
             )
 
         return Response(status=status.HTTP_200_OK)
-
-
-class BatchTransactionUploadView(APIView):
-    authentication_classes = [OAuth2Authentication]
-    permission_classes = [TokenHasScope]
-    required_scopes = ["smart_meter"]
-
-    def post(self, request: Request):
-        serializer = BatchTransactionUploadSerializer(data=request.data)
-        smart_meter = SmartMeter.objects.get(application=request.auth.application)
-        if serializer.is_valid():
-            transactions = serializer.validated_data.get("transactions", [])
-            transaction_objects = [
-                Transaction(
-                    **transaction,
-                    smart_meter=smart_meter,
-                )
-                for transaction in transactions
-            ]
-            Transaction.objects.bulk_create(transaction_objects)
-            count = len(transactions)
-
-            return Response(
-                {"message": f"{count} transactions uploaded successfully."},
-                status=status.HTTP_200_OK,
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ClusterRegistrationView(APIView):

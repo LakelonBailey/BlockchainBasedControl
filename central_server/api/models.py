@@ -43,7 +43,9 @@ class SmartMeter(BaseModel):
 
 class BCOrder(BaseModel):
     order_id = models.CharField(max_length=1000, unique=True, db_index=True)
-    smart_meter = models.ForeignKey(SmartMeter, on_delete=models.CASCADE, null=True)
+    smart_meter = models.ForeignKey(
+        SmartMeter, on_delete=models.CASCADE, null=True, related_name="orders"
+    )
     order_type = models.CharField(
         max_length=4,
         choices=(
@@ -87,21 +89,3 @@ class BCTransaction(BaseModel):
         ),
         null=False,
     )
-
-
-class Transaction(BaseModel):
-    TRANSACTION_TYPES = (
-        ("production", "Production"),
-        ("consumption", "Consumption"),
-    )
-    # Link each transaction to a SmartMeter.
-    smart_meter = models.ForeignKey(
-        SmartMeter, on_delete=models.CASCADE, related_name="transactions"
-    )
-    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
-    energy_kwh = models.DecimalField(max_digits=10, decimal_places=8)
-    timestamp = models.DateTimeField(null=True)
-
-    def __str__(self):
-        return f"{self.smart_meter.uuid} - {self.transaction_type} - \
-{self.energy_kwh} kWh"

@@ -10,6 +10,7 @@ import {
   Paper,
   Tooltip,
   Typography,
+  Button,
 } from "@mui/material";
 import { CheckCircle, HighlightOff } from "@mui/icons-material";
 import { API_ORIGIN } from "../../constants/api";
@@ -17,28 +18,26 @@ import useGet from "../../hooks/useGet";
 import useWebSocket, { ReceiveType } from "../../hooks/useWebSocket";
 import useDisclosure from "../../hooks/useDisclosure";
 import { useCallback, useEffect, useState } from "react";
-import { formatSeconds } from "../../utils/formatting";
+import { Link } from "react-router-dom";
 
 interface SmartMeter {
   uuid: string;
   last_ping_ts: string;
-  total_transactions: number;
+  total_orders: number;
 }
 
 interface SmartMeterListItemProps {
   smartMeter: SmartMeter;
-  currentTime: Date;
 }
 
 // Defines the active interval threshold (in seconds)
 const ACTIVE_METER_INTERVAL = 20;
 
-// Compute whether a meter is active using the current time
-const isActiveSmartMeter = (smartMeter: SmartMeter, currentTime: Date) => {
-  const timeSincePing = Math.round(
-    (currentTime.getTime() - new Date(smartMeter.last_ping_ts).getTime()) / 1000
-  );
-  return timeSincePing < ACTIVE_METER_INTERVAL;
+// Compute whether a meter is active based on its last ping timestamp
+const isActiveSmartMeter = (smartMeter: SmartMeter) => {
+  const lastPing = new Date(smartMeter.last_ping_ts).getTime();
+  const now = Date.now();
+  return (now - lastPing) / 1000 < ACTIVE_METER_INTERVAL;
 };
 
 // Reusable component to display fields uniformly
@@ -55,18 +54,15 @@ const FieldDisplay = ({ label, value }: FieldDisplayProps) => (
   </Box>
 );
 
-// SmartMeter list item component now receives the current time via props.
-function SmartMeterListItem({
-  smartMeter,
-  currentTime,
-  ...props
-}: SmartMeterListItemProps & ListItemButtonProps) {
-  const timeSincePing = Math.round(
-    (currentTime.getTime() - new Date(smartMeter.last_ping_ts).getTime()) / 1000
-  );
-
+function SmartMeterListItem({ smartMeter, ...props }: SmartMeterListItemProps) {
+  const active = isActiveSmartMeter(smartMeter);
   return (
-    <ListItemButton {...props} divider>
+    <ListItemButton
+      {...props}
+      divider
+      LinkComponent={Link}
+      to={`/analytics?smart_meter_id=${smartMeter.uuid}`}
+    >
       <ListItemText
         disableTypography
         primary={
@@ -78,7 +74,7 @@ function SmartMeterListItem({
             <Typography variant="body1" fontWeight="bold">
               ID: {smartMeter.uuid}
             </Typography>
-            {isActiveSmartMeter(smartMeter, currentTime) ? (
+            {active ? (
               <Tooltip title="Active">
                 <Box display="flex" alignItems="center">
                   <Typography variant="overline">Active</Typography>
@@ -98,12 +94,12 @@ function SmartMeterListItem({
         secondary={
           <Box mt={1}>
             <FieldDisplay
-              label="Time since last ping"
-              value={formatSeconds(timeSincePing)}
+              label="Last Ping"
+              value={new Date(smartMeter.last_ping_ts).toLocaleString()}
             />
             <FieldDisplay
-              label="Total Transactions"
-              value={smartMeter.total_transactions}
+              label="Total Orders"
+              value={smartMeter.total_orders}
             />
           </Box>
         }
@@ -113,40 +109,33 @@ function SmartMeterListItem({
 }
 
 export default function Meters() {
+  const [page, setPage] = useState(1);
+  const limit = 10;
   const { data } = useGet(`${API_ORIGIN}/api/meters/`, {
-    params: { page: 1, limit: 10 },
+    params: { page, limit },
   });
+
   const [smartMeters, setSmartMeters] = useState<Record<string, SmartMeter>>(
     {}
   );
   const [selectedSmartMeterId, setSelectedSmartMeterId] = useState<
     string | null
   >(null);
-  const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const smartMeterAnalysisDisc = useDisclosure();
 
-  // Global timer: update current time and re-evaluate each meter's active status every second
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Update state when new data is fetched from the API
+  // Merge or replace fetched pages
   useEffect(() => {
     if (data) {
-      const newSmartMeterMap = Object.fromEntries(
-        (data.results as SmartMeter[]).map((smartMeter) => [
-          smartMeter.uuid,
-          smartMeter,
-        ])
-      ) as Record<string, SmartMeter>;
-      setSmartMeters(newSmartMeterMap);
+      const entries = Object.fromEntries(
+        data.results.map((m: SmartMeter) => [m.uuid, m])
+      );
+      setSmartMeters((prev) =>
+        page === 1 ? entries : { ...prev, ...entries }
+      );
     }
-  }, [data]);
+  }, [data, page]);
 
-  // Update smart meter details upon receiving WebSocket messages
+  // Handle WebSocket meter status updates
   useWebSocket({
     path: "/ws/meters/status/",
     enabled: true,
@@ -154,35 +143,32 @@ export default function Meters() {
       receive: { METER_STATUS: "meter_status" },
       send: {},
     },
-    onMessage: useCallback((data: ReceiveType) => {
-      if (data.type === "meter_status") {
-        const smartMeterInfo = data.data as {
+    onMessage: useCallback((msg: ReceiveType) => {
+      if (msg.type === "meter_status") {
+        const info = msg.data as {
           last_ping_ts: string;
           smart_meter_id: string;
-          total_transactions?: number;
+          total_orders?: number;
         };
-        console.log(
-          `Received ping from meter: ${smartMeterInfo.smart_meter_id}`
-        );
         setSmartMeters((prev) => ({
           ...prev,
-          [smartMeterInfo.smart_meter_id]: {
-            ...prev[smartMeterInfo.smart_meter_id],
-            last_ping_ts: smartMeterInfo.last_ping_ts,
-            total_transactions:
-              smartMeterInfo.total_transactions ??
-              prev[smartMeterInfo.smart_meter_id]?.total_transactions ??
-              0,
+          [info.smart_meter_id]: {
+            ...prev[info.smart_meter_id],
+            last_ping_ts: info.last_ping_ts,
+            total_orders:
+              info.total_orders ?? prev[info.smart_meter_id].total_orders,
           },
         }));
       }
     }, []),
   });
 
+  const hasNext = Boolean(data?.next);
+
   return (
     <>
       <Dialog {...smartMeterAnalysisDisc.getDisclosureProps()}>
-        <DialogTitle component={"div"}>
+        <DialogTitle>
           <Typography variant="h5">Smart Meter Analysis</Typography>
           <Typography variant="subtitle2" sx={{ color: "rgba(0, 0, 0, .6)" }}>
             ID: {selectedSmartMeterId}
@@ -190,37 +176,32 @@ export default function Meters() {
         </DialogTitle>
         {selectedSmartMeterId && (
           <DialogContent>
-            Time since last ping:{" "}
-            {formatSeconds(
-              Math.round(
-                (new Date().getTime() -
-                  new Date(
-                    smartMeters[selectedSmartMeterId].last_ping_ts
-                  ).getTime()) /
-                  1000
-              )
-            )}
+            Last Ping:{" "}
+            {new Date(
+              smartMeters[selectedSmartMeterId].last_ping_ts
+            ).toLocaleString()}
           </DialogContent>
         )}
       </Dialog>
+
       <Box p={2} sx={{ backgroundColor: "lightgray", minHeight: "100vh" }}>
         <Typography variant="h5" fontWeight="bold" mb={2}>
           Smart Meter Status
         </Typography>
+
         <List component={Paper}>
-          {Object.values(smartMeters).map((smartMeter) => (
-            <SmartMeterListItem
-              key={smartMeter.uuid}
-              smartMeter={smartMeter}
-              currentTime={currentTime}
-              onClick={() => {
-                console.log(`Clicked: ${smartMeter.uuid}`);
-                setSelectedSmartMeterId(smartMeter.uuid);
-                smartMeterAnalysisDisc.onOpen();
-              }}
-            />
+          {Object.values(smartMeters).map((meter) => (
+            <SmartMeterListItem key={meter.uuid} smartMeter={meter} />
           ))}
         </List>
+
+        {hasNext && (
+          <Box textAlign="center" mt={2}>
+            <Button variant="outlined" onClick={() => setPage((p) => p + 1)}>
+              Load More
+            </Button>
+          </Box>
+        )}
       </Box>
     </>
   );
