@@ -1,4 +1,3 @@
-
 import os
 import json
 import logging
@@ -43,7 +42,6 @@ energy_moving_average = 0
 battery = 0  # units are kWh
 battery_lock = Lock()
 energy_bought_from_grid_kWh = 0
-
 
 
 private_key = None
@@ -193,16 +191,12 @@ async def geth_setup_async(port1, is_auth="n"):
     uri = "ws://144.126.248.158:8000/ws"
     password = "blockchain123"
     async with websockets.connect(uri) as ws:
-        auth_payload = {
-        "password": password  # ← replace with your actual password
-        }
+        auth_payload = {"password": password}  # ← replace with your actual password
         await ws.send(json.dumps(auth_payload))
         auth_resp = await ws.recv()
         logger.info(auth_resp)
-        
-        account_payload = {
-            "account": ACCOUNT# ← populate with your account data
-        }
+
+        account_payload = {"account": ACCOUNT}  # ← populate with your account data
         await ws.send(json.dumps(account_payload))
         reply = await ws.recv()
         print("Server reply:", reply)
@@ -285,25 +279,51 @@ def updateOrder(buyerOId, sellerOId, quantity, exec_price):
             battery = max(battery - quantity, 0)
 
     with orders_lock:
+        loop = asyncio.get_event_loop()
         oid = buyerOId if buyerOId in orders else sellerOId
         if oid not in orders:
             return False
         o = orders.get(oid)
         o["executed_price"] = exec_price
+
+        is_first_transaction = o["curr_qty"] == o["origin_qty"]
         o["curr_qty"] -= quantity
         if o["curr_qty"] <= 0:
             orders.pop(oid, None)
+
+        if is_first_transaction:
+            loop.run_until_complete(
+                global_server_api.update_order(oid, {"state": "matched"})
+            )
+
+        loop.run_until_complete(
+            global_server_api.create_transaction(
+                oid, {"amount": quantity, "executed_price": exec_price}
+            )
+        )
 
 
 def addOrder(orderId, isBuy, amount, pricePerUnit, isMarket):
     if not isMarket:
         with orders_lock:
+            order_type = "buy" if isBuy else "sell"
             orders[orderId] = dict(
-                side="buy" if isBuy else "sell",
+                side=order_type,
                 origin_qty=amount,  # the original quantity that the user wants to buy/sell - does not change
                 user_price=pricePerUnit,  # the price that the user submits the buy/sell order at
                 executed_price=-1,  # the price that the most recently updated transaction executes at -> this value gets updated
                 curr_qty=amount,  # how much quantity is still outstanding -> this value gets updated
+            )
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(
+                global_server_api.create_order(
+                    orderId,
+                    {
+                        "order_type": order_type,
+                        "total_amount": amount,
+                        "price": pricePerUnit,
+                    },
+                )
             )
 
 
@@ -320,7 +340,7 @@ def handle_event(event):
     for key, value in event["args"].items():
         if isinstance(value, bytes):
             value = value.hex()
-        #print(f"  {key}: {value}")
+        # print(f"  {key}: {value}")
         logger.info(f"  {key}: {value}")
 
     if event["event"] == "OrderMatched":
@@ -388,32 +408,36 @@ def listen_for_events(event_name, filters):
 
 def spin_event_threads():
     # TODO: Initialize all Web3 client info, find account, etc.
-      # TODO: Initialize all Web3 client info, find account, etc.
+    # TODO: Initialize all Web3 client info, find account, etc.
     global ACCOUNT
-    
-    
-    
+
     global private_key, account, orderbook_contract, w3
     with open("/app/auto-geth-setup/geth_node/address.txt", "r") as account_file:
-      ACCOUNT = account_file.read()  # account address generated when creating geth account
+        ACCOUNT = (
+            account_file.read()
+        )  # account address generated when creating geth account
     with open("/app/auto-geth-setup/geth_node/key.txt", "r") as key_file:
-      KEYSTORE_PATH = key_file.read()  # Path to keystore file generated when creating geth account
+        KEYSTORE_PATH = (
+            key_file.read()
+        )  # Path to keystore file generated when creating geth account
     KEYSTORE_FILE = "/app/auto-geth-setup/geth_node/" + str(KEYSTORE_PATH)
     with open("/app/auto-geth-setup/geth_node/password.txt", "r") as password:
-      KEYSTORE_PASSWORD = password.read()  # /password.txt after geth setup
-    logger.info(f"keystore pw{KEYSTORE_PASSWORD}   http addr {WEB3_PROVIDER}")  
-      
+        KEYSTORE_PASSWORD = password.read()  # /password.txt after geth setup
+    logger.info(f"keystore pw{KEYSTORE_PASSWORD}   http addr {WEB3_PROVIDER}")
+
     w3 = Web3(
         Web3.HTTPProvider(WEB3_PROVIDER)
-    )       # Initialized as None at first. Will be changed AFTER geth account setup
-    CONTRACT_ADDRESS = w3.to_checksum_address(os.environ["CONTRACT_ADDRESS"])  # Initialized on-demand after geth account setup
+    )  # Initialized as None at first. Will be changed AFTER geth account setup
+    CONTRACT_ADDRESS = w3.to_checksum_address(
+        os.environ["CONTRACT_ADDRESS"]
+    )  # Initialized on-demand after geth account setup
     if w3.is_connected():
         print("Connected to node!")
         print(f"Chain ID: {w3.eth.chain_id}")
         print(f"Block Number: {w3.eth.block_number}")
     else:
         print(
-        "Failed to connect to node. Check if geth is running with --http on port 8545."
+            "Failed to connect to node. Check if geth is running with --http on port 8545."
         )
 
     with open(KEYSTORE_FILE) as f:

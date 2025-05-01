@@ -68,6 +68,14 @@ class CentralServerAPI:
             raise Exception("Failed to ping central server: " + response.text)
 
     async def create_transaction(self, order_id: str, transaction_payload: dict):
+        """
+        Example order payload:
+        ```
+        {
+            "amount": 10.00,
+        }
+        ```
+        """
         payload = {"order_id": order_id, **transaction_payload}
         response = await self.post(
             "/api/transactions/",
@@ -82,6 +90,15 @@ class CentralServerAPI:
             raise Exception("Failed to create transaction: " + response.text)
 
     async def create_order(self, order_id: str, order_payload: dict):
+        """
+        Example order payload:
+        ```
+        {
+            "total_amount": 50.00,
+            "order_type": "buy"
+        }
+        ```
+        """
         payload = {"order_id": order_id, **order_payload}
         response = await self.post(
             "/api/orders/",
@@ -96,6 +113,15 @@ class CentralServerAPI:
             raise Exception("Failed to create order: " + response.text)
 
     async def update_order(self, order_id: str, order_payload: dict):
+        """
+        Example order payload:
+        ```
+        {
+            "price": 3.00,
+            "state": "matched" # or "cancelled" or "placed"
+        }
+        ```
+        """
         payload = {"order_id": order_id, **order_payload}
         response = await self.put(
             "/api/orders/",
