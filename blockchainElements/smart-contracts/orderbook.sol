@@ -167,7 +167,24 @@ contract EnergyOrderBookNativeCurrency {
             emit OrderCancelled(msg.sender, false, index, orderId);
         }
     }
+    
+    function removeAllOrdersForUser(address user) public {
+        require(msg.sender == user, "Unauthorized");
 
+        // Remove buy orders (backwards)
+        for (uint i = buyOrders.length; i > 0; i--) {
+            if (buyOrders[i - 1].user == user) {
+                removeBuyOrder(i - 1);
+            }
+        }
+
+        // Remove sell orders (backwards)
+        for (uint j = sellOrders.length; j > 0; j--) {
+            if (sellOrders[j - 1].user == user) {
+                removeSellOrder(j - 1);
+            }
+        }
+    }
 
     function placeOrder(uint256 energyAmount, uint256 pricePerUnit, bool isBuy, bool isMarket) public {
         if (balances[msg.sender] == 0) {
