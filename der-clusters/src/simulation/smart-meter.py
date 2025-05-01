@@ -382,7 +382,7 @@ def handle_event(event):
     if event["event"] == "OrderMatched":
         oid = Web3.to_hex(event["args"]["buyerOrderId"])
         energy_am = event["args"]["energyAmount"] / 100
-        exec_price = event["args"]["pricePerUnit"]
+        exec_price = event["args"]["pricePerUnit"] / 100
         updateOrder(oid, event["args"]["sellerOrderId"], energy_am, exec_price)
 
     # add orderId to OrderCanceled
