@@ -36,7 +36,7 @@ PING_INTERVAL = 10
 
 #limit to 1 trade per 10 seconds
 TRADE_WAIT_TIME = 10
-last_trade = None
+last_trade = 0
 
 # How many KwH the battery can hold
 BATTERY_CAPACITY = random.uniform(8, 14)
@@ -632,6 +632,7 @@ def update_battery_sync(device_type, energy_kwh):
         current_time = time.time()
         if current_time - last_trade >= TRADE_WAIT_TIME:
             determine_trades()
+            last_trade = time.time()
 
 
 @app.websocket("/ws/{device_id}")
