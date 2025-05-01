@@ -12,6 +12,10 @@ from threading import Lock
 import random
 from collections import deque
 import websockets
+import signal
+import atexit
+import sys
+import time
 
 CLIENT_ID = os.environ["CLIENT_ID"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
@@ -30,16 +34,22 @@ ACCOUNT = None
 # Interval in seconds by which the meter will ping the central server
 PING_INTERVAL = 10
 
+#limit to 1 trade per 10 seconds
+TRADE_WAIT_TIME = 10
+last_trade = None
+
 # How many KwH the battery can hold
-BATTERY_CAPACITY = 13.5
+BATTERY_CAPACITY = random.uniform(8, 14)
 
 # moving average window to track battery
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
 
+# Energy price when the order books are empty and nothing has been executed
+BASE_KWH_PRICE = .13    #TN's rate
 # the moving average of net energy production
 energy_moving_average = 0
 
-battery = 0  # units are kWh
+battery = random.uniform(0, BATTERY_CAPACITY)  # units are kWh
 battery_lock = Lock()
 energy_bought_from_grid_kWh = 0
 main_loop: asyncio.AbstractEventLoop = None
@@ -70,6 +80,30 @@ blockchain_started_lock = Lock()
 # store user orders
 orders: dict[str, dict] = {}
 orders_lock = Lock()
+cleanup_done = False
+
+def cleanup():
+    global cleanup_done
+    if cleanup_done:
+        return
+    cleanup_done = True
+    print("Performing cleanup...removing all your orders")
+    try:
+        send_transaction(orderbook_contract.functions.removeAllOrdersForUser(ACCOUNT))
+    except Exception as e:
+        print(f"Failed to remove orders: {e}")
+
+def signal_handler(signum, frame):
+    print(f"\nCaught signal: {signum}")
+    cleanup()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+signal.signal(signal.SIGTERM, signal_handler)  # `kill` (default)
+
+# Fallback: clean up on normal interpreter shutdown
+atexit.register(cleanup)
+
 
 
 async def upload_enode(enode: str) -> requests.Response:
@@ -517,7 +551,8 @@ def determine_trades():
             if battery / BATTERY_CAPACITY < 0.85
             else random.triangular(0.0, -0.03, -0.01)
         )
-        limit_price = round((best_bid * (1 + price_multiplier * direction)), 2)
+        my_bid = best_bid if best_bid > 0 else BASE_KWH_PRICE
+        limit_price = round((my_bid* (1 + price_multiplier * direction)), 2)
         try:
             # scale val
             send_transaction(
@@ -549,7 +584,8 @@ def determine_trades():
             if battery / BATTERY_CAPACITY > 0.15
             else random.triangular(0.0, 0.03, 0.02)
         )
-        limit_price = round((best_ask * (1 + price_multiplier)), 2)
+        my_ask = best_ask if best_ask > 0 else BASE_KWH_PRICE
+        limit_price = round((my_ask * (1 + price_multiplier)), 2)
         try:
             # scale val
             send_transaction(
@@ -593,7 +629,9 @@ def update_battery_sync(device_type, energy_kwh):
                 )
                 battery = 0
 
-        determine_trades()
+        current_time = time.time()
+        if current_time - last_trade >= TRADE_WAIT_TIME:
+            determine_trades()
 
 
 @app.websocket("/ws/{device_id}")
