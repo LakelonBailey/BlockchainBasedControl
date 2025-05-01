@@ -22,7 +22,7 @@ class SmallSolarPanel(ProductionDevice):
         super().__init__(
             device_name="Small Solar Panel",
             production_tier=LowProductionTier(),
-            energy_factors=[SolarFactor()],
+            energy_factors=[RandomUsageFactor()],
         )
 
 
@@ -33,19 +33,19 @@ class LargeSolarArray(ProductionDevice):
         super().__init__(
             device_name="Large Solar Array",
             production_tier=ModerateProductionTier(),
-            energy_factors=[SolarFactor(), SeasonalFactor()],
+            energy_factors=[RandomUsageFactor()],
         )
 
 
-class ResidentialWindTurbine(ProductionDevice):
-    """A small residential wind turbine that generates energy based on wind speed"""
+# class ResidentialWindTurbine(ProductionDevice):
+#     """A small residential wind turbine that generates energy based on wind speed"""
 
-    def __init__(self):
-        super().__init__(
-            device_name="Residential Wind Turbine",
-            production_tier=ModerateProductionTier(),
-            energy_factors=[WindFactor()],
-        )
+#     def __init__(self):
+#         super().__init__(
+#             device_name="Residential Wind Turbine",
+#             production_tier=ModerateProductionTier(),
+#             energy_factors=[WindFactor()],
+#         )
 
 
 class IndustrialWindTurbine(ProductionDevice):
@@ -55,7 +55,7 @@ class IndustrialWindTurbine(ProductionDevice):
         super().__init__(
             device_name="Industrial Wind Turbine",
             production_tier=HighProductionTier(),
-            energy_factors=[WindFactor(), SeasonalFactor()],
+            energy_factors=[RandomUsageFactor()],
         )
 
 
@@ -66,19 +66,19 @@ class HydroPowerPlant(ProductionDevice):
         super().__init__(
             device_name="Hydro Power Plant",
             production_tier=VeryHighProductionTier(),
-            energy_factors=[],
+            energy_factors=[RandomUsageFactor()],
         )
 
 
-class DieselGenerator(ProductionDevice):
-    """A backup diesel generator that runs mostly during peak hours"""
+# class DieselGenerator(ProductionDevice):
+#     """A backup diesel generator that runs mostly during peak hours"""
 
-    def __init__(self):
-        super().__init__(
-            device_name="Diesel Generator",
-            production_tier=HighProductionTier(),
-            energy_factors=[PeakHoursFactor(), RandomUsageFactor()],
-        )
+#     def __init__(self):
+#         super().__init__(
+#             device_name="Diesel Generator",
+#             production_tier=HighProductionTier(),
+#             energy_factors=[PeakHoursFactor(), RandomUsageFactor()],
+#         )
 
 
 class IndustrialBackupGenerator(ProductionDevice):
