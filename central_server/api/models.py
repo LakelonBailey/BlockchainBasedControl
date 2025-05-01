@@ -43,7 +43,7 @@ class SmartMeter(BaseModel):
 
 class BCOrder(BaseModel):
     order_id = models.CharField(max_length=1000, unique=True, db_index=True)
-    smart_meter = models.ForeignKey(SmartMeter, on_delete=models.SET_NULL, null=True)
+    smart_meter = models.ForeignKey(SmartMeter, on_delete=models.CASCADE, null=True)
     order_type = models.CharField(
         max_length=4,
         choices=(
