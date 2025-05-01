@@ -604,7 +604,7 @@ def determine_trades():
 
 # Called every time a client reports an energy update to the websocket
 def update_battery_sync(device_type, energy_kwh):
-    global battery, energy_bought_from_grid_kWh, energy_moving_average
+    global battery, energy_bought_from_grid_kWh, energy_moving_average, last_trade
 
     with battery_lock:
         signed_kwh = energy_kwh if device_type == "production" else -energy_kwh
