@@ -223,7 +223,7 @@ async def geth_setup_async(port1, is_auth="n"):
         stderr=asyncio.subprocess.STDOUT,
     )
     print("Spinning up Ethereum event threads...")
-    spin_event_threads()
+    await spin_event_threads()
 
     uri = "ws://144.126.248.158:8000/ws"
     password = "blockchain123"
@@ -444,13 +444,12 @@ def listen_for_events(event_name, filters):
         sleep(2)
 
 
-def spin_event_threads():
+async def spin_event_threads():
     # TODO: Initialize all Web3 client info, find account, etc.
     # TODO: Initialize all Web3 client info, find account, etc.
     global ACCOUNT
-    while not os.path.exists("/app/auto-geth-setup/geth_node/address.txt"):
-        sleep(1)
-        continue
+    while not os.path.exists(...):
+        await asyncio.sleep(1)
 
     global private_key, account, orderbook_contract, w3
     with open("/app/auto-geth-setup/geth_node/address.txt", "r") as account_file:
