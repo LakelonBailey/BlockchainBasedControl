@@ -42,7 +42,7 @@ energy_moving_average = 0
 battery = 0  # units are kWh
 battery_lock = Lock()
 energy_bought_from_grid_kWh = 0
-main_loop: asyncio.AbstractEventLoop
+main_loop: asyncio.AbstractEventLoop = None
 
 
 private_key = None
@@ -300,7 +300,8 @@ def updateOrder(buyerOId, sellerOId, quantity, exec_price):
         asyncio.run_coroutine_threadsafe(
             global_server_api.create_transaction(
                 oid, {"amount": quantity, "executed_price": exec_price}
-            )
+            ),
+            main_loop,
         )
 
 
@@ -323,7 +324,8 @@ def addOrder(orderId, isBuy, amount, pricePerUnit, isMarket):
                         "total_amount": amount,
                         "price": pricePerUnit,
                     },
-                )
+                ),
+                main_loop,
             )
 
 
