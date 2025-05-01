@@ -34,7 +34,7 @@ ACCOUNT = None
 # Interval in seconds by which the meter will ping the central server
 PING_INTERVAL = 10
 
-#limit to 1 trade per 10 seconds
+# limit to 1 trade per 10 seconds
 TRADE_WAIT_TIME = 10
 last_trade = 0
 
@@ -45,7 +45,7 @@ BATTERY_CAPACITY = random.uniform(8, 14)
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
 
 # Energy price when the order books are empty and nothing has been executed
-BASE_KWH_PRICE = .13    #TN's rate
+BASE_KWH_PRICE = 0.13  # TN's rate
 # the moving average of net energy production
 energy_moving_average = 0
 
@@ -82,6 +82,7 @@ orders: dict[str, dict] = {}
 orders_lock = Lock()
 cleanup_done = False
 
+
 def cleanup():
     global cleanup_done
     if cleanup_done:
@@ -93,17 +94,18 @@ def cleanup():
     except Exception as e:
         print(f"Failed to remove orders: {e}")
 
+
 def signal_handler(signum, frame):
     print(f"\nCaught signal: {signum}")
     cleanup()
     sys.exit(0)
 
-signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+
+signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
 signal.signal(signal.SIGTERM, signal_handler)  # `kill` (default)
 
 # Fallback: clean up on normal interpreter shutdown
 atexit.register(cleanup)
-
 
 
 async def upload_enode(enode: str) -> requests.Response:
@@ -446,6 +448,9 @@ def spin_event_threads():
     # TODO: Initialize all Web3 client info, find account, etc.
     # TODO: Initialize all Web3 client info, find account, etc.
     global ACCOUNT
+    while not os.path.exists("/app/auto-geth-setup/geth_node/address.txt"):
+        sleep(1)
+        continue
 
     global private_key, account, orderbook_contract, w3
     with open("/app/auto-geth-setup/geth_node/address.txt", "r") as account_file:
@@ -552,7 +557,7 @@ def determine_trades():
             else random.triangular(0.0, -0.03, -0.01)
         )
         my_bid = best_bid if best_bid > 0 else BASE_KWH_PRICE
-        limit_price = round((my_bid* (1 + price_multiplier * direction)), 2)
+        limit_price = round((my_bid * (1 + price_multiplier * direction)), 2)
         try:
             # scale val
             send_transaction(
