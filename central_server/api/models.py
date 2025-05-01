@@ -75,6 +75,9 @@ class BCTransaction(BaseModel):
         related_name="transactions",
         null=False,
     )
+    executed_price = models.DecimalField(
+        max_digits=20, decimal_places=8, null=True, blank=True
+    )
     amount = models.DecimalField(max_digits=20, decimal_places=8)
     transaction_type = models.CharField(
         max_length=4,

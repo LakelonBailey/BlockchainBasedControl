@@ -50,6 +50,7 @@ class BCTransactionSerializer(serializers.ModelSerializer):
             "order_id",
             "amount",
             "transaction_type",
+            "executed_price",
             "created_at",
         ]
         read_only_fields = ["transaction_type", "created_at"]
@@ -60,12 +61,14 @@ class BCTransactionSerializer(serializers.ModelSerializer):
         # Infer the opposite transaction type
         transaction_type = "buy" if order.order_type == "sell" else "sell"
         amount = validated_data["amount"]
+        executed_price = validated_data["executed_price"]
 
         with transaction.atomic():
             tx = BCTransaction.objects.create(
                 order=order,
                 amount=amount,
                 transaction_type=transaction_type,
+                executed_price=executed_price,
             )
             # Update filled amount and order state
             order.filled_amount += amount
