@@ -39,7 +39,7 @@ TRADE_WAIT_TIME = 10
 last_trade = 0
 
 # How many KwH the battery can hold
-BATTERY_CAPACITY = random.uniform(8, 14)
+BATTERY_CAPACITY = random.uniform(.5, 1)
 
 # moving average window to track battery
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
@@ -557,7 +557,7 @@ def determine_trades():
     ):  # we are close to full battery and should sell some energy
         sell_am = determine_sell_amount(energy_moving_average, base_amount)
         sell_am = (0.5 * battery) if battery - sell_am < 0 else sell_am
-        direction = random.choice([-1, 1])  # Randomly go above or below reference
+        #direction = random.choice([-1, 1])  # Randomly go above or below reference
         # if your battery is neering full you are more likely to sell for less
         price_multiplier = (
             random.triangular(0.0, -0.03, 0.0)
@@ -565,7 +565,7 @@ def determine_trades():
             else random.triangular(0.0, -0.03, -0.01)
         )
         my_bid = best_bid if best_bid > 0 else BASE_KWH_PRICE
-        limit_price = round((my_bid * (1 + price_multiplier * direction)), 2)
+        limit_price = round((my_bid * (1 + price_multiplier)), 4)
         try:
             # scale val
             send_transaction(
@@ -590,7 +590,7 @@ def determine_trades():
             if battery + buy_am > BATTERY_CAPACITY
             else buy_am
         )
-        direction = random.choice([-1, 1])  # Randomly go above or below reference
+        #direction = random.choice([-1, 1])  # Randomly go above or below reference
         # if your battery is neering empty you are more willing to pay a higher price
         price_multiplier = (
             random.triangular(0.0, 0.03, 0.00)
@@ -598,7 +598,7 @@ def determine_trades():
             else random.triangular(0.0, 0.03, 0.02)
         )
         my_ask = best_ask if best_ask > 0 else BASE_KWH_PRICE
-        limit_price = round((my_ask * (1 + price_multiplier)), 2)
+        limit_price = round((my_ask * (1 + price_multiplier)), 4)
         try:
             # scale val
             send_transaction(
