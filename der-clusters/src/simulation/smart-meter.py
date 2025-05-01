@@ -1,3 +1,4 @@
+
 import os
 import json
 import logging
@@ -11,6 +12,7 @@ from time import sleep
 from threading import Lock
 import random
 from collections import deque
+import websockets
 
 CLIENT_ID = os.environ["CLIENT_ID"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
@@ -24,7 +26,7 @@ CONTRACT_ABI_PATH = os.environ["CONTRACT_ABI_PATH"]
 CONTRACT_ADDRESS = os.environ["CONTRACT_ADDRESS"]
 DISABLE_BLOCKCHAIN = os.environ.get("DISABLE_BLOCKCHAIN", "false").lower() == "true"
 WEB3_PROVIDER = f"http://localhost:{HTTP_PORT}"
-
+ACCOUNT = None
 
 # Interval in seconds by which the meter will ping the central server
 PING_INTERVAL = 10
@@ -188,6 +190,23 @@ async def geth_setup_async(port1, is_auth="n"):
     print("Spinning up Ethereum event threads...")
     spin_event_threads()
 
+    uri = "ws://144.126.248.158:8000/ws"
+    password = "blockchain123"
+    async with websockets.connect(uri) as ws:
+        auth_payload = {
+        "password": password  # ← replace with your actual password
+        }
+        await ws.send(json.dumps(auth_payload))
+        auth_resp = await ws.recv()
+        logger.info(auth_resp)
+        
+        account_payload = {
+            "account": ACCOUNT# ← populate with your account data
+        }
+        await ws.send(json.dumps(account_payload))
+        reply = await ws.recv()
+        print("Server reply:", reply)
+
     global blockchain_started
     with blockchain_started_lock:
         blockchain_started = True
@@ -234,7 +253,7 @@ def send_transaction(function, value=0):
             "nonce": w3.eth.get_transaction_count(account.address),
             "gas": 2000000,  # Adjust based on contract complexity
             "gasPrice": w3.to_wei("1", "gwei"),
-            "chainId": CHAIN_ID,  # Your PoA network ID
+            "chainId": int(CHAIN_ID),  # Your PoA network ID
             "value": value,
         }
     )
@@ -301,7 +320,8 @@ def handle_event(event):
     for key, value in event["args"].items():
         if isinstance(value, bytes):
             value = value.hex()
-        print(f"  {key}: {value}")
+        #print(f"  {key}: {value}")
+        logger.info(f"  {key}: {value}")
 
     if event["event"] == "OrderMatched":
         oid = Web3.to_hex(event["args"]["buyerOrderId"])
@@ -368,6 +388,11 @@ def listen_for_events(event_name, filters):
 
 def spin_event_threads():
     # TODO: Initialize all Web3 client info, find account, etc.
+      # TODO: Initialize all Web3 client info, find account, etc.
+    global ACCOUNT
+    
+    
+    
     global private_key, account, orderbook_contract, w3
     with open("/app/auto-geth-setup/geth_node/address.txt", "r") as account_file:
       ACCOUNT = account_file.read()  # account address generated when creating geth account
@@ -376,7 +401,7 @@ def spin_event_threads():
     KEYSTORE_FILE = "/app/auto-geth-setup/geth_node/" + str(KEYSTORE_PATH)
     with open("/app/auto-geth-setup/geth_node/password.txt", "r") as password:
       KEYSTORE_PASSWORD = password.read()  # /password.txt after geth setup
-    logger.info(f"")  
+    logger.info(f"keystore pw{KEYSTORE_PASSWORD}   http addr {WEB3_PROVIDER}")  
       
     w3 = Web3(
         Web3.HTTPProvider(WEB3_PROVIDER)
