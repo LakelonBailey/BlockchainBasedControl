@@ -1,9 +1,10 @@
 import os
-import argparse
-import subprocess
 import sys
 import yaml
+import random
 import requests
+import argparse
+import subprocess
 from dotenv import load_dotenv
 
 
@@ -29,18 +30,23 @@ def build_compose_yaml(
     contract_address,
     disable_blockchain,
 ):
+    # auto-generate device count and consumption/production ratio
+    num_devices = random.randint(10, 40)
+    consumption = random.choice(range(10, 100, 10))
+    production = 100 - consumption
+    ratio = f"{consumption}:{production}"
+
     services = {}
     for i, client in enumerate(clients, start=1):
         geth_port = 30303 + i  # port the geth node is broadcasting
         http_port = 8545 + i  # http geth console port 8545 + der cluster number
-        auth_rpc_port = 20900 + i  # just need to define to prevent port conflicts
-        ws_port = 22000 + i  # just need to define to prevent port conflicts
+        auth_rpc_port = 20900 + i  # prevent port conflicts
+        ws_port = 22000 + i  # prevent port conflicts
         name = f"der-cluster-{i}"
         services[name] = {
             "build": {"context": ".", "dockerfile": "Dockerfile"},
             "container_name": name,
             "network_mode": "host",
-            # "networks": ["smart_grid"],
             "environment": [
                 f"METER_ORIGIN=ws://localhost:{base_port + i}",
                 f"METER_PORT={base_port + i}",
@@ -56,13 +62,14 @@ def build_compose_yaml(
                 f"DISABLE_BLOCKCHAIN={str(disable_blockchain).lower()}",
                 f"CONTRACT_ABI_PATH={contract_abi_path}",
                 f"CONTRACT_ADDRESS={contract_address}",
+                f"NUM_DEVICES={num_devices}",
+                f"CONSUMPTION_PRODUCTION_RATIO={ratio}",
             ],
         }
 
     return {
         "version": "3.8",
         "services": services,
-        # "networks": {"smart_grid": {"driver": "bridge"}},
     }
 
 
