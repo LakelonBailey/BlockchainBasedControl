@@ -20,6 +20,26 @@ class BCOrderSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["filled_amount", "created_at"]
 
+    def create(self, validated_data):
+        # Grab the current request from serializer context
+        request = self.context.get("request")
+        if not request or not hasattr(request, "auth") or not request.auth:
+            raise serializers.ValidationError(
+                "Authentication credentials were not provided."
+            )
+
+        # Find the SmartMeter tied to this OAuth2 application
+        try:
+            sm = SmartMeter.objects.get(application=request.auth.application)
+        except SmartMeter.DoesNotExist:
+            raise serializers.ValidationError(
+                "No SmartMeter found for this client application."
+            )
+
+        # Inject it into the data we’ll save
+        validated_data["smart_meter"] = sm
+        return super().create(validated_data)
+
 
 class BCTransactionSerializer(serializers.ModelSerializer):
     order_id = serializers.CharField(write_only=True)
