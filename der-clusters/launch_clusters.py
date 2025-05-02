@@ -40,7 +40,7 @@ def build_compose_yaml(
         # consumption = random.choice(range(10, 100, 10))
         # production = 100 - consumption
         # ratio = f"{consumption}:{production}"
-        ratio = "10:90" if i % 0 else "90:10"
+        ratio = "10:90" if i % 2 else "90:10"
 
         geth_port = 30303 + i  # port the geth node is broadcasting
         http_port = 8545 + i  # http geth console port 8545 + der cluster number
