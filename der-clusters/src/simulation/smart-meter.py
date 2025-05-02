@@ -395,10 +395,11 @@ def handle_event(event):
         logger.info(f"  {key}: {value}")
 
     if event["event"] == "OrderMatched":
-        oid = Web3.to_hex(event["args"]["buyerOrderId"])
+        buyer_oid = Web3.to_hex(event["args"]["buyerOrderId"])
+        seller_oid = Web3.to_hex(event["args"]["sellerOrderId"])
         energy_am = event["args"]["energyAmount"] / 100
         exec_price = event["args"]["pricePerUnit"] / 100
-        updateOrder(oid, event["args"]["sellerOrderId"], energy_am, exec_price)
+        updateOrder(buyer_oid, seller_oid, energy_am, exec_price)
 
     # add orderId to OrderCanceled
     if event["event"] == "OrderCanceled":
