@@ -7,7 +7,7 @@ class LowProductionTier(ProductionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=100.0, tier_no=1)
+        super().__init__(default_kw=10.0, tier_no=1)
 
 
 class ModerateProductionTier(ProductionTier):
@@ -17,7 +17,7 @@ class ModerateProductionTier(ProductionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=200.0, tier_no=2)
+        super().__init__(default_kw=20.0, tier_no=2)
 
 
 class HighProductionTier(ProductionTier):
@@ -26,7 +26,7 @@ class HighProductionTier(ProductionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=300.0, tier_no=3)
+        super().__init__(default_kw=30.0, tier_no=3)
 
 
 class VeryHighProductionTier(ProductionTier):
@@ -36,7 +36,7 @@ class VeryHighProductionTier(ProductionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=400.0, tier_no=4)
+        super().__init__(default_kw=40.0, tier_no=4)
 
 
 class ExtremeProductionTier(ProductionTier):
@@ -46,4 +46,4 @@ class ExtremeProductionTier(ProductionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=500.0, tier_no=5)
+        super().__init__(default_kw=50.0, tier_no=5)
