@@ -39,10 +39,13 @@ TRADE_WAIT_TIME = 10
 last_trade = 0
 
 # How many KwH the battery can hold
-BATTERY_CAPACITY = random.uniform(0.5, 1)
+BATTERY_CAPACITY = random.uniform(1, 5)
 
 # moving average window to track battery
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
+
+# Margin between quantity and price to place another order
+SEND_ORDER_MARGIN = 0.5
 
 # Energy price when the order books are empty and nothing has been executed
 BASE_KWH_PRICE = 0.13  # TN's rate
@@ -532,6 +535,17 @@ def determine_buy_amount(trend, base_amount=1.0):
     return max(0.1, round(base_amount * adjustment, 2))
 
 
+def validate_trade(order_type, amount, price):
+    for order_id, order_info in orders.items():
+        if order_type == order_info["side"]:
+            if (abs(order_info["curr_qty"] - amount) / amount) <= 0.05 and (
+                abs(order_info["user_price"] - price) / price
+            ) <= 0.10:
+                return False
+
+    return True
+
+
 # automates trading. More likely to make a trade when battery is full/empty
 def determine_trades():
     try:
@@ -564,20 +578,21 @@ def determine_trades():
         my_bid = best_bid if best_bid > 0 else BASE_KWH_PRICE
         limit_price = round((my_bid * (1 + price_multiplier)), 4)
         logger.info(f"LIMIT PRICE: {limit_price}")
-        try:
-            # scale val
-            send_transaction(
-                orderbook_contract.functions.placeOrder(  # TODO descale by 100 for transaction notifications
-                    int(
-                        sell_am * 100
-                    ),  # quantity (scale by 100 because solidity does not have a decimal type)
-                    int(limit_price * 100),  # price per unit
-                    False,  # isBuy
-                    isMarket,
+        if validate_trade("sell", sell_am, limit_price):
+            try:
+                # scale val
+                send_transaction(
+                    orderbook_contract.functions.placeOrder(  # TODO descale by 100 for transaction notifications
+                        int(
+                            sell_am * 100
+                        ),  # quantity (scale by 100 because solidity does not have a decimal type)
+                        int(limit_price * 100),  # price per unit
+                        False,  # isBuy
+                        isMarket,
+                    )
                 )
-            )
-        except Exception as e:
-            print(f"Failed to place sell order: {e}")
+            except Exception as e:
+                print(f"Failed to place sell order: {e}")
 
     if (
         battery + energy_moving_average <= BATTERY_CAPACITY * decision_threshold
@@ -597,20 +612,21 @@ def determine_trades():
         )
         my_ask = best_ask if best_ask > 0 else BASE_KWH_PRICE
         limit_price = round((my_ask * (1 + price_multiplier)), 4)
-        try:
-            # scale val
-            send_transaction(
-                orderbook_contract.functions.placeOrder(
-                    int(
-                        buy_am * 100
-                    ),  # quantity (scale by 100 because solidity does not have a decimal type)
-                    int(limit_price * 100),  # price per unit
-                    True,  # isBuy
-                    isMarket,
+        if validate_trade("buy", buy_am, limit_price):
+            try:
+                # scale val
+                send_transaction(
+                    orderbook_contract.functions.placeOrder(
+                        int(
+                            buy_am * 100
+                        ),  # quantity (scale by 100 because solidity does not have a decimal type)
+                        int(limit_price * 100),  # price per unit
+                        True,  # isBuy
+                        isMarket,
+                    )
                 )
-            )
-        except Exception as e:
-            print(f"Failed to place sell order: {e}")
+            except Exception as e:
+                print(f"Failed to place sell order: {e}")
 
 
 # Called every time a client reports an energy update to the websocket
