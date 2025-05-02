@@ -36,7 +36,7 @@ def build_compose_yaml(
     services = {}
     for i, client in enumerate(clients, start=1):
         random.seed(time.time() * (base_port + i))
-        num_devices = random.randint(10, 40)
+        num_devices = 10
         # consumption = random.choice(range(10, 100, 10))
         # production = 100 - consumption
         # ratio = f"{consumption}:{production}"
