@@ -7,7 +7,6 @@ import {
   Typography,
   TextField,
   Button,
-  ButtonGroup,
 } from "@mui/material";
 import { LineChart } from "@mui/x-charts/LineChart";
 import { BarChart } from "@mui/x-charts/BarChart";
@@ -50,6 +49,26 @@ export default function AnalyticsDashboard() {
     return d.toLocaleDateString();
   };
 
+  // Prepare cards with optional subtext
+  const cards = [
+    {
+      label: "Total Orders",
+      value: summary?.total_orders?.toString(),
+      subtext: `(${summary?.total_buy_orders ?? 0} buy | ${
+        summary?.total_sell_orders ?? 0
+      } sell)`,
+    },
+    {
+      label: "Total Transactions",
+      value: summary?.total_transactions?.toString(),
+      subtext: `(${summary?.total_buy_transactions ?? 0} buy | ${
+        summary?.total_sell_transactions ?? 0
+      } sell)`,
+    },
+    { label: "Energy Bought (kWh)", value: summary?.total_energy_bought },
+    { label: "Energy Sold (kWh)", value: summary?.total_energy_sold },
+  ];
+
   return (
     <Box
       p={2}
@@ -80,15 +99,7 @@ export default function AnalyticsDashboard() {
       </Box>
 
       <Grid container spacing={2} mb={3}>
-        {[
-          { label: "Total Orders", value: summary?.total_orders?.toString() },
-          {
-            label: "Total Transactions",
-            value: summary?.total_transactions?.toString(),
-          },
-          { label: "Energy Bought (kWh)", value: summary?.total_energy_bought },
-          { label: "Energy Sold (kWh)", value: summary?.total_energy_sold },
-        ].map((card) => (
+        {cards.map((card) => (
           <Grid size={{ xs: 12, sm: 6, md: 3 }} key={card.label}>
             <Card>
               <CardContent>
@@ -96,6 +107,11 @@ export default function AnalyticsDashboard() {
                   {card.label}
                 </Typography>
                 <Typography variant="h5">{card.value ?? "—"}</Typography>
+                {card.subtext && (
+                  <Typography variant="body2" color="textSecondary">
+                    {card.subtext}
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           </Grid>

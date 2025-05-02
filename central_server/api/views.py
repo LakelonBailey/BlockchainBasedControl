@@ -57,7 +57,11 @@ class AnalyticsSummaryAPIView(APIView):
 
         summary = {
             "total_orders": order_qs.count(),
+            "total_buy_orders": order_qs.filter(order_type="buy").count(),
+            "total_sell_orders": order_qs.filter(order_type="sell").count(),
             "total_transactions": tx_qs.count(),
+            "total_buy_transactions": tx_qs.filter(transaction_type="buy").count(),
+            "total_sell_transactions": tx_qs.filter(transaction_type="sell").count(),
             "total_energy_bought": agg["total_energy_bought"] or 0,
             "total_energy_sold": agg["total_energy_sold"] or 0,
         }
