@@ -12,33 +12,40 @@ import pytz
 async def send_energy_data(device_name: str, meter_origin: str):
     """
     Connects to the smart meter and sends energy updates at random intervals from 1-10
-    seconds.
+    seconds. If the connection drops or fails, waits 5 seconds then retries.
     """
 
     device_name_map = get_device_name_map()
     device = device_name_map[device_name]()
     device_id = device.id
     ws_url = f"{meter_origin}/ws/{device_id}"
+
     start_time = datetime.now(pytz.UTC)
-    try:
-        async with websockets.connect(ws_url) as websocket:
-            while True:
-                current_time = datetime.now(pytz.UTC)
-                energy_kwh = device.calculate_kwh(start_time, current_time)
-                if energy_kwh > 0:
-                    message = {
-                        "timestamp": current_time.isoformat(),
-                        "energy_kwh": energy_kwh,
-                        "device": device.to_dict(),
-                    }
-                    start_time = current_time
 
-                    await websocket.send(json.dumps(message))
+    while True:
+        try:
+            async with websockets.connect(ws_url) as websocket:
+                print(f"[{device_id}] Connected to {ws_url}")
+                # Reset start time on fresh connect if you prefer, or keep the old one
+                start_time = datetime.now(pytz.UTC)
 
-                await asyncio.sleep(random.randint(1, 10))
-    except Exception as e:
-        print(f"[{device_id}] Connection error: {e}")
-        await asyncio.sleep(5)
+                while True:
+                    current_time = datetime.now(pytz.UTC)
+                    energy_kwh = device.calculate_kwh(start_time, current_time)
+                    if energy_kwh > 0:
+                        message = {
+                            "timestamp": current_time.isoformat(),
+                            "energy_kwh": energy_kwh,
+                            "device": device.to_dict(),
+                        }
+                        start_time = current_time
+                        await websocket.send(json.dumps(message))
+
+                    await asyncio.sleep(random.randint(1, 10))
+
+        except Exception as e:
+            print(f"[{device_id}] Connection error: {e}. Retrying in 5 seconds...")
+            await asyncio.sleep(5)
 
 
 if __name__ == "__main__":
@@ -50,7 +57,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--meter-origin",
-        default=os.environ.get("METER_ORIGIN", "ws://localhost:8000)"),
+        default=os.environ.get("METER_ORIGIN", "ws://localhost:8000"),
         help="Smart meter WebSocket URL",
     )
 
