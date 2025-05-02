@@ -39,7 +39,7 @@ TRADE_WAIT_TIME = 10
 last_trade = 0
 
 # How many KwH the battery can hold
-BATTERY_CAPACITY = random.uniform(.5, 1)
+BATTERY_CAPACITY = random.uniform(1, 5)
 
 # moving average window to track battery
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
