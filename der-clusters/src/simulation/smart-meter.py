@@ -40,7 +40,7 @@ TRADE_WAIT_TIME = 10
 last_trade = 0
 
 # How many KwH the battery can hold
-BATTERY_CAPACITY = random.uniform(1, 5)
+BATTERY_CAPACITY = 50
 
 # moving average window to track battery
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
@@ -53,10 +53,18 @@ BASE_KWH_PRICE = 0.13  # TN's rate
 # the moving average of net energy production
 energy_moving_average = 0
 
-battery = random.uniform(0, BATTERY_CAPACITY)  # units are kWh
+battery = int(BATTERY_CAPACITY * 0.5)  # kWh
 battery_lock = Lock()
 energy_bought_from_grid_kWh = 0
 main_loop: asyncio.AbstractEventLoop = None
+# for synchronizing stats across connections
+energy_stats_lock = asyncio.Lock()
+
+# sliding window of the last 10 kWh values
+recent_kwh: list[float] = []
+
+# total number of energy‐transactions seen so far
+transaction_count = 0
 
 
 private_key = None
@@ -454,10 +462,6 @@ async def spin_event_threads():
     # TODO: Initialize all Web3 client info, find account, etc.
     global ACCOUNT
 
-    #   while not os.path.exists("/app/auto-geth-setup/geth_node/address.txt"):
-    #        sleep(1)
-    #        continue
-
     while not os.path.exists("/app/auto-geth-setup/geth_node/address.txt"):
         await asyncio.sleep(1)
 
@@ -586,7 +590,7 @@ def determine_trades():
             else random.triangular(0.0, -0.20, -0.10)
         )
         my_bid = best_bid if best_bid > 0 else BASE_KWH_PRICE
-        limit_price = (my_bid * (1 + price_multiplier))
+        limit_price = my_bid * (1 + price_multiplier)
         limit_price *= 100
         limit_price = "{:.2f}".format(limit_price)
         limit_price = normal_round(float(limit_price))
@@ -625,11 +629,10 @@ def determine_trades():
             else random.triangular(0.0, 0.20, 0.10)
         )
         my_ask = best_ask if best_ask > 0 else BASE_KWH_PRICE
-        limit_price = (my_ask * (1 + price_multiplier))
+        limit_price = my_ask * (1 + price_multiplier)
         limit_price *= 100
         limit_price = "{:.2f}".format(limit_price)
         limit_price = normal_round(float(limit_price))
-
 
         if validate_trade("buy", buy_am, limit_price):
             try:
@@ -698,8 +701,25 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
             message = json.loads(data)
             device_id = message["device"]["id"]
             energy_kwh = message["energy_kwh"]
-            timestamp = message["timestamp"]
             device_type = message["device"]["type"]
+
+            # track average over the last 10 transactions
+            global transaction_count
+            async with energy_stats_lock:
+                transaction_count += 1
+                recent_kwh.append(
+                    energy_kwh * (-1 if device_type == "consumption" else 1)
+                )
+                if len(recent_kwh) > 10:
+                    recent_kwh.pop(0)
+
+                # every 10th transaction, log the net of the last 10
+                if transaction_count % 10 == 0:
+                    net_kwh = sum(recent_kwh)
+                    logger.info(
+                        f"Net energy over last 10 transactions: {net_kwh:.8f} kWh"
+                    )
+
             with blockchain_started_lock:
                 if not blockchain_started:
                     continue
