@@ -32,7 +32,7 @@ if ENVIRONMENT == "local":
     BASE_URL = "http://localhost:8000"
     CORS_ALLOW_ALL_ORIGINS = True
 else:
-    DEBUG = False
+    DEBUG = True
     BASE_URL = "https://blockchain.lakelon.dev"
 
     ALLOWED_HOSTS = ["*"]
