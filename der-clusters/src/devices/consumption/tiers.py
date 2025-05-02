@@ -7,7 +7,7 @@ class LowerPowerTier(ConsumptionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=1, tier_no=1)
+        super().__init__(default_kw=100, tier_no=1)
 
 
 class LowPowerTier(ConsumptionTier):
@@ -16,7 +16,7 @@ class LowPowerTier(ConsumptionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=2, tier_no=2)
+        super().__init__(default_kw=200, tier_no=2)
 
 
 class MediumPowerTier(ConsumptionTier):
@@ -25,7 +25,7 @@ class MediumPowerTier(ConsumptionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=3, tier_no=3)
+        super().__init__(default_kw=300, tier_no=3)
 
 
 class HighPowerTier(ConsumptionTier):
@@ -34,7 +34,7 @@ class HighPowerTier(ConsumptionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=4, tier_no=4)
+        super().__init__(default_kw=400, tier_no=4)
 
 
 class HigherPowerTier(ConsumptionTier):
@@ -44,4 +44,4 @@ class HigherPowerTier(ConsumptionTier):
     """
 
     def __init__(self):
-        super().__init__(default_kw=5, tier_no=5)
+        super().__init__(default_kw=500, tier_no=5)
