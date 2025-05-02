@@ -87,7 +87,7 @@ cleanup_done = False
 
 
 def cleanup():
-    global cleanup_done
+    global cleanup_done, orderbook_contract
     if cleanup_done:
         return
     cleanup_done = True
@@ -550,6 +550,9 @@ def validate_trade(order_type, amount, price):
 def determine_trades():
     try:
         best_bid, best_ask, last_price = orderbook_contract.functions.getPrice().call()
+        best_bid = best_bid / 100
+        best_ask = best_ask / 100
+        last_price = last_price / 100
     except Exception as e:
         print(f"Failed to fetch price: {e}")
         return
@@ -576,7 +579,7 @@ def determine_trades():
             else random.triangular(0.0, -0.03, -0.01)
         )
         my_bid = best_bid if best_bid > 0 else BASE_KWH_PRICE
-        limit_price = round((my_bid * (1 + price_multiplier)), 4)
+        limit_price = "{:.4f}".format(round((my_bid * (1 + price_multiplier)), 4))
         logger.info(f"LIMIT PRICE: {limit_price}")
         if validate_trade("sell", sell_am, limit_price):
             try:
@@ -611,7 +614,8 @@ def determine_trades():
             else random.triangular(0.0, 0.03, 0.02)
         )
         my_ask = best_ask if best_ask > 0 else BASE_KWH_PRICE
-        limit_price = round((my_ask * (1 + price_multiplier)), 4)
+        limit_price = "{:.4f}".format(round((my_ask * (1 + price_multiplier)), 4))
+
         if validate_trade("buy", buy_am, limit_price):
             try:
                 # scale val
