@@ -103,7 +103,7 @@ class BCTransaction(BaseModel):
     def __str__(self):
         # Reference parent order, then show type, amount, and execution price
         return (
-            f"Txn {self.id} for Order {self.order.order_id} — "
+            f"Txn on Order {self.order.order_id} — "
             f"{self.get_transaction_type_display()} "
             f"{self.amount} kWh @ "
             f"${self.executed_price or '—'}"
