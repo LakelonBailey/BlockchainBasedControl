@@ -39,7 +39,7 @@ TRADE_WAIT_TIME = 10
 last_trade = 0
 
 # How many KwH the battery can hold
-BATTERY_CAPACITY = random.uniform(.5, 1)
+BATTERY_CAPACITY = random.uniform(0.5, 1)
 
 # moving average window to track battery
 MOVING_AVERAGE_ALPHA = random.uniform(0.05, 0.3)
@@ -450,15 +450,12 @@ async def spin_event_threads():
     # TODO: Initialize all Web3 client info, find account, etc.
     global ACCOUNT
 
-    
-#   while not os.path.exists("/app/auto-geth-setup/geth_node/address.txt"):
-#        sleep(1)
-#        continue
+    #   while not os.path.exists("/app/auto-geth-setup/geth_node/address.txt"):
+    #        sleep(1)
+    #        continue
 
     while not os.path.exists("/app/auto-geth-setup/geth_node/address.txt"):
         await asyncio.sleep(1)
-
-
 
     global private_key, account, orderbook_contract, w3
     with open("/app/auto-geth-setup/geth_node/address.txt", "r") as account_file:
@@ -557,7 +554,7 @@ def determine_trades():
     ):  # we are close to full battery and should sell some energy
         sell_am = determine_sell_amount(energy_moving_average, base_amount)
         sell_am = (0.5 * battery) if battery - sell_am < 0 else sell_am
-        #direction = random.choice([-1, 1])  # Randomly go above or below reference
+        # direction = random.choice([-1, 1])  # Randomly go above or below reference
         # if your battery is neering full you are more likely to sell for less
         price_multiplier = (
             random.triangular(0.0, -0.03, 0.0)
@@ -566,6 +563,7 @@ def determine_trades():
         )
         my_bid = best_bid if best_bid > 0 else BASE_KWH_PRICE
         limit_price = round((my_bid * (1 + price_multiplier)), 4)
+        logger.info(f"LIMIT PRICE: {limit_price}")
         try:
             # scale val
             send_transaction(
@@ -590,7 +588,7 @@ def determine_trades():
             if battery + buy_am > BATTERY_CAPACITY
             else buy_am
         )
-        #direction = random.choice([-1, 1])  # Randomly go above or below reference
+        # direction = random.choice([-1, 1])  # Randomly go above or below reference
         # if your battery is neering empty you are more willing to pay a higher price
         price_multiplier = (
             random.triangular(0.0, 0.03, 0.00)
@@ -647,7 +645,9 @@ def update_battery_sync(device_type, energy_kwh):
             determine_trades()
             last_trade = time.time()
         logger.info(f"Battery: {battery}")
-        logger.info(f"Battery Capacity: {BATTERY_CAPACITY}")       
+        logger.info(f"Battery Capacity: {BATTERY_CAPACITY}")
+
+
 @app.websocket("/ws/{device_id}")
 async def websocket_endpoint(websocket: WebSocket, device_id: str):
     """
@@ -675,9 +675,9 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
             # Log each energy transaction.
             # Log each energy transaction
     #        logger.info(
-     #           f"Energy Transaction | ID: {device_id} | Type: {device_type} "
-     #           f"| kWh: {energy_kwh:.8f}"
-      #      )
+    #           f"Energy Transaction | ID: {device_id} | Type: {device_type} "
+    #           f"| kWh: {energy_kwh:.8f}"
+    #      )
 
     except WebSocketDisconnect:
         connected_devices.remove(device_id)
