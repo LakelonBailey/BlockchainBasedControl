@@ -6,7 +6,11 @@ from django.db import transaction
 
 class AnalyticsSummarySerializer(serializers.Serializer):
     total_orders = serializers.IntegerField()
+    total_sell_orders = serializers.IntegerField()
+    total_buy_orders = serializers.IntegerField()
     total_transactions = serializers.IntegerField()
+    total_sell_transactions = serializers.IntegerField()
+    total_buy_transactions = serializers.IntegerField()
     total_energy_bought = serializers.DecimalField(max_digits=20, decimal_places=8)
     total_energy_sold = serializers.DecimalField(max_digits=20, decimal_places=8)
 
