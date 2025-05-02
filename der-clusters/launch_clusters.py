@@ -33,15 +33,13 @@ def build_compose_yaml(
 ):
 
     # auto-generate device count and consumption/production ratio
-
-    random.seed(time.time() * base_port)
-    num_devices = random.randint(10, 40)
-    consumption = random.choice(range(10, 100, 10))
-    production = 100 - consumption
-    ratio = f"{consumption}:{production}"
-
     services = {}
     for i, client in enumerate(clients, start=1):
+        random.seed(time.time() * base_port)
+        num_devices = random.randint(10, 40)
+        consumption = random.choice(range(10, 100, 10))
+        production = 100 - consumption
+        ratio = f"{consumption}:{production}"
         geth_port = 30303 + i  # port the geth node is broadcasting
         http_port = 8545 + i  # http geth console port 8545 + der cluster number
         auth_rpc_port = 20900 + i  # prevent port conflicts
