@@ -16,6 +16,7 @@ import signal
 import atexit
 import sys
 import time
+import math
 
 CLIENT_ID = os.environ["CLIENT_ID"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
@@ -546,6 +547,12 @@ def validate_trade(order_type, amount, price):
     return True
 
 
+def normal_round(n):
+    if n - math.floor(n) < 0.5:
+        return math.floor(n)
+    return math.ceil(n)
+
+
 # automates trading. More likely to make a trade when battery is full/empty
 def determine_trades():
     try:
@@ -565,7 +572,7 @@ def determine_trades():
     order_type_prob = random.random()
     # volatility_factor = min(abs(energy_moving_average) / BATTERY_CAPACITY, 1.0)
     isMarket = True if order_type_prob < 0.20 else False  # maybe make this more dynamic
-
+    # ******* SELL ********
     if battery + energy_moving_average >= BATTERY_CAPACITY * (
         1 - decision_threshold
     ):  # we are close to full battery and should sell some energy
@@ -574,12 +581,16 @@ def determine_trades():
         # direction = random.choice([-1, 1])  # Randomly go above or below reference
         # if your battery is neering full you are more likely to sell for less
         price_multiplier = (
-            random.triangular(0.0, -0.03, 0.0)
+            random.triangular(0.0, -0.10, 0.0)
             if battery / BATTERY_CAPACITY < 0.85
-            else random.triangular(0.0, -0.03, -0.01)
+            else random.triangular(0.0, -0.20, -0.10)
         )
         my_bid = best_bid if best_bid > 0 else BASE_KWH_PRICE
-        limit_price = "{:.4f}".format(round((my_bid * (1 + price_multiplier)), 4))
+        limit_price = (my_bid * (1 + price_multiplier))
+        limit_price *= 100
+        limit_price = "{:.2f}".format(limit_price)
+        limit_price = normal_round(float(limit_price))
+
         logger.info(f"LIMIT PRICE: {limit_price}")
         if validate_trade("sell", sell_am, limit_price):
             try:
@@ -589,14 +600,14 @@ def determine_trades():
                         int(
                             sell_am * 100
                         ),  # quantity (scale by 100 because solidity does not have a decimal type)
-                        int(limit_price * 100),  # price per unit
+                        int(limit_price),  # price per unit
                         False,  # isBuy
                         isMarket,
                     )
                 )
             except Exception as e:
                 print(f"Failed to place sell order: {e}")
-
+    # ***** BUY *******
     if (
         battery + energy_moving_average <= BATTERY_CAPACITY * decision_threshold
     ):  # we are close to empty and should buy energy
@@ -609,12 +620,16 @@ def determine_trades():
         # direction = random.choice([-1, 1])  # Randomly go above or below reference
         # if your battery is neering empty you are more willing to pay a higher price
         price_multiplier = (
-            random.triangular(0.0, 0.03, 0.00)
+            random.triangular(0.0, 0.10, 0.00)
             if battery / BATTERY_CAPACITY > 0.15
-            else random.triangular(0.0, 0.03, 0.02)
+            else random.triangular(0.0, 0.20, 0.10)
         )
         my_ask = best_ask if best_ask > 0 else BASE_KWH_PRICE
-        limit_price = "{:.4f}".format(round((my_ask * (1 + price_multiplier)), 4))
+        limit_price = (my_ask * (1 + price_multiplier))
+        limit_price *= 100
+        limit_price = "{:.2f}".format(limit_price)
+        limit_price = normal_round(float(limit_price))
+
 
         if validate_trade("buy", buy_am, limit_price):
             try:
@@ -624,7 +639,7 @@ def determine_trades():
                         int(
                             buy_am * 100
                         ),  # quantity (scale by 100 because solidity does not have a decimal type)
-                        int(limit_price * 100),  # price per unit
+                        int(limit_price),  # price per unit
                         True,  # isBuy
                         isMarket,
                     )
