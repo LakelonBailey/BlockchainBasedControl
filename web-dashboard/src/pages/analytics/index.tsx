@@ -51,8 +51,13 @@ export default function AnalyticsDashboard() {
   };
 
   return (
-    <Box p={2}>
-      <Typography variant="h4" gutterBottom>
+    <Box
+      p={2}
+      sx={{
+        backgroundColor: "rgba(0, 0, 0, .1)",
+      }}
+    >
+      <Typography variant="h4" gutterBottom fontWeight={"bold"}>
         Blockchain Energy Dashboard
       </Typography>
 

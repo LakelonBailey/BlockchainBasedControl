@@ -109,19 +109,11 @@ function SmartMeterListItem({ smartMeter, ...props }: SmartMeterListItemProps) {
 }
 
 export default function Meters() {
-  const [page, setPage] = useState(1);
-  const limit = 10;
-  const { data } = useGet(`${API_ORIGIN}/api/meters/`, {
-    params: { page, limit },
-  });
+  const { data } = useGet(`${API_ORIGIN}/api/meters/`);
 
   const [smartMeters, setSmartMeters] = useState<Record<string, SmartMeter>>(
     {}
   );
-  const [selectedSmartMeterId, setSelectedSmartMeterId] = useState<
-    string | null
-  >(null);
-  const smartMeterAnalysisDisc = useDisclosure();
 
   // Merge or replace fetched pages
   useEffect(() => {
@@ -129,11 +121,9 @@ export default function Meters() {
       const entries = Object.fromEntries(
         data.results.map((m: SmartMeter) => [m.uuid, m])
       );
-      setSmartMeters((prev) =>
-        page === 1 ? entries : { ...prev, ...entries }
-      );
+      setSmartMeters(entries);
     }
-  }, [data, page]);
+  }, [data]);
 
   // Handle WebSocket meter status updates
   useWebSocket({
@@ -163,29 +153,13 @@ export default function Meters() {
     }, []),
   });
 
-  const hasNext = Boolean(data?.next);
-
   return (
     <>
-      <Dialog {...smartMeterAnalysisDisc.getDisclosureProps()}>
-        <DialogTitle>
-          <Typography variant="h5">Smart Meter Analysis</Typography>
-          <Typography variant="subtitle2" sx={{ color: "rgba(0, 0, 0, .6)" }}>
-            ID: {selectedSmartMeterId}
-          </Typography>
-        </DialogTitle>
-        {selectedSmartMeterId && (
-          <DialogContent>
-            Last Ping:{" "}
-            {new Date(
-              smartMeters[selectedSmartMeterId].last_ping_ts
-            ).toLocaleString()}
-          </DialogContent>
-        )}
-      </Dialog>
-
-      <Box p={2} sx={{ backgroundColor: "lightgray", minHeight: "100vh" }}>
-        <Typography variant="h5" fontWeight="bold" mb={2}>
+      <Box
+        p={2}
+        sx={{ backgroundColor: "rgba(0, 0, 0, .1)", minHeight: "100vh" }}
+      >
+        <Typography variant="h4" gutterBottom fontWeight={"bold"}>
           Smart Meter Status
         </Typography>
 
@@ -194,14 +168,6 @@ export default function Meters() {
             <SmartMeterListItem key={meter.uuid} smartMeter={meter} />
           ))}
         </List>
-
-        {hasNext && (
-          <Box textAlign="center" mt={2}>
-            <Button variant="outlined" onClick={() => setPage((p) => p + 1)}>
-              Load More
-            </Button>
-          </Box>
-        )}
       </Box>
     </>
   );

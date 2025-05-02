@@ -189,9 +189,9 @@ class BCTransactionAPIView(APIView):
 
 # Custom pagination class using 'page' and 'limit' query parameters
 class GeneralPagination(PageNumberPagination):
-    page_size = 10  # default items per page
-    page_query_param = "page"  # for the current page number (default)
-    page_size_query_param = "limit"  # allows client to set page size using "limit"
+    page_size = 100
+    page_query_param = "page"
+    page_size_query_param = "limit"
     max_page_size = 100
 
 
