@@ -5,6 +5,7 @@ import random
 import requests
 import argparse
 import subprocess
+import time
 from dotenv import load_dotenv
 
 
@@ -30,7 +31,10 @@ def build_compose_yaml(
     contract_address,
     disable_blockchain,
 ):
+
     # auto-generate device count and consumption/production ratio
+
+    random.seed(time.time() * base_port)
     num_devices = random.randint(10, 40)
     consumption = random.choice(range(10, 100, 10))
     production = 100 - consumption
