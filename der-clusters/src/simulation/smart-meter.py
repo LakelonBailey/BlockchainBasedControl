@@ -12,9 +12,6 @@ from threading import Lock
 import random
 from collections import deque
 import websockets
-import signal
-import atexit
-import sys
 import time
 import math
 
@@ -92,32 +89,8 @@ blockchain_started_lock = Lock()
 # store user orders
 orders: dict[str, dict] = {}
 orders_lock = Lock()
-cleanup_done = False
 
 
-def cleanup():
-    global cleanup_done, orderbook_contract
-    if cleanup_done:
-        return
-    cleanup_done = True
-    logger.info("Performing cleanup...removing all your orders")
-    try:
-        send_transaction(orderbook_contract.functions.removeAllOrdersForUser(ACCOUNT))
-    except Exception as e:
-        logger.info(f"Failed to remove orders: {e}")
-
-
-def signal_handler(signum, frame):
-    logger.log(f"\nCaught signal: {signum}")
-    cleanup()
-    sys.exit(0)
-
-
-signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
-signal.signal(signal.SIGTERM, signal_handler)  # `kill` (default)
-
-# Fallback: clean up on normal interpreter shutdown
-atexit.register(cleanup)
 
 
 async def upload_enode(enode: str) -> requests.Response:
