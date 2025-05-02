@@ -541,7 +541,7 @@ def determine_buy_amount(trend, base_amount=1.0):
 
 
 def validate_trade(order_type, amount, price):
-    #return True
+    return True
     for order_id, order_info in orders.items():
         if order_type == order_info["side"]:
             if (abs(order_info["curr_qty"] - amount) / amount) <= 0.05 and (
@@ -581,7 +581,9 @@ def determine_trades():
     if battery + energy_moving_average >= BATTERY_CAPACITY * (
         1 - decision_threshold
     ):  # we are close to full battery and should sell some energy
-        logger.info(f"We are inside of the sell block. Battery: {battery}       Energy Moving Average {energy_moving_average}")
+        logger.info(
+            f"We are inside of the sell block. Battery: {battery}       Energy Moving Average {energy_moving_average}"
+        )
         sell_am = determine_sell_amount(energy_moving_average, base_amount)
         sell_am = (0.5 * battery) if battery - sell_am < 0 else sell_am
         # direction = random.choice([-1, 1])  # Randomly go above or below reference
@@ -599,7 +601,9 @@ def determine_trades():
 
         logger.info(f"********** LIMIT PRICE FOR SELL: {limit_price} ***********")
         if validate_trade("sell", sell_am, limit_price):
-            logger.info(f"***** Aproved To Sell.  Moving average: {energy_moving_average}   Battery level: {battery}**********")
+            logger.info(
+                f"***** Aproved To Sell.  Moving average: {energy_moving_average}   Battery level: {battery}**********"
+            )
             try:
                 # scale val
                 send_transaction(
@@ -618,7 +622,9 @@ def determine_trades():
     if (
         battery + energy_moving_average <= BATTERY_CAPACITY * decision_threshold
     ):  # we are close to empty and should buy energy
-        logger.info(f"We are inside of the buy block. Battery: {battery}       Energy Moving Average {energy_moving_average}")
+        logger.info(
+            f"We are inside of the buy block. Battery: {battery}       Energy Moving Average {energy_moving_average}"
+        )
         buy_am = determine_buy_amount(energy_moving_average, base_amount)
         buy_am = (
             (0.5 * (BATTERY_CAPACITY - battery))
@@ -639,7 +645,9 @@ def determine_trades():
         limit_price = normal_round(float(limit_price))
 
         if validate_trade("buy", buy_am, limit_price):
-            logger.info(f"***** Aproved To Buy.  Moving average: {energy_moving_average}   Battery level: {battery}**********")
+            logger.info(
+                f"***** Aproved To Buy.  Moving average: {energy_moving_average}   Battery level: {battery}**********"
+            )
 
             try:
                 # scale val
