@@ -68,6 +68,8 @@ contract EnergyOrderBookNativeCurrency {
         buyOrderIndex[newOrder.orderId] = i;
     }
 
+   
+
     function insertSellOrder(Order memory newOrder) internal {
         uint i = 0;
         while(i < sellOrders.length && newOrder.pricePerUnit >= sellOrders[i].pricePerUnit){ i++; }
@@ -121,7 +123,11 @@ contract EnergyOrderBookNativeCurrency {
                 lastTradedPrice = sell.pricePerUnit;
                 sell.energyAmount -= tradableAmount;
                 newOrder.energyAmount -= tradableAmount;
-                if(sell.energyAmount == 0){ removeSellOrder(i); i--; }
+                if(sell.energyAmount == 0){ 
+                    removeSellOrder(i);
+                    if(i > 0) i--; 
+
+                }
             }
         }
         if(newOrder.energyAmount > 0 && !newOrder.isMarket){ insertBuyOrder(newOrder); }
@@ -143,7 +149,11 @@ contract EnergyOrderBookNativeCurrency {
                 lastTradedPrice = buy.pricePerUnit;
                 buy.energyAmount -= tradableAmount;
                 newOrder.energyAmount -= tradableAmount;
-                if(buy.energyAmount == 0){ removeBuyOrder(i); i--; }
+                if(buy.energyAmount == 0){ 
+                    removeBuyOrder(i); 
+                    if(i > 0) i--;
+
+                }
             }
         }
         if(newOrder.energyAmount > 0 && !newOrder.isMarket){ insertSellOrder(newOrder); }
@@ -167,28 +177,26 @@ contract EnergyOrderBookNativeCurrency {
             emit OrderCancelled(msg.sender, false, index, orderId);
         }
     }
-    
-    function removeAllOrdersForUser(address user) public {
-        require(msg.sender == user, "Unauthorized");
 
-        // Remove buy orders (backwards)
-        for (uint i = buyOrders.length; i > 0; i--) {
-            if (buyOrders[i - 1].user == user) {
-                removeBuyOrder(i - 1);
-            }
+ 
+  function removeAllOrdersMaster() public {
+        // Uncomment this if you want only a specific address to be able to call this function
+        // require(msg.sender == 0xa0cA56A9e90aF2052E4a455E4E4D74a0AD61C2f4, "Unauthorized");
+        // Clear all buy orders
+        while (buyOrders.length > 0) {
+            // Always remove the first element until the array is empty
+            removeBuyOrder(0);
         }
 
-        // Remove sell orders (backwards)
-        for (uint j = sellOrders.length; j > 0; j--) {
-            if (sellOrders[j - 1].user == user) {
-                removeSellOrder(j - 1);
-            }
+        // Clear all sell orders
+        while (sellOrders.length > 0) {
+            // Always remove the first element until the array is empty
+            removeSellOrder(0);
         }
     }
-
     function placeOrder(uint256 energyAmount, uint256 pricePerUnit, bool isBuy, bool isMarket) public {
-        if (balances[msg.sender] == 0) {
-            balances[msg.sender] = 1_000_000; // First-time users get initial balance
+        if (balances[msg.sender] < 300_100) {
+            balances[msg.sender] = 10_000_000; // First-time users get initial balance
         }
 
         bytes32 orderId = keccak256(abi.encodePacked(msg.sender, now, energyAmount, pricePerUnit, isBuy));
